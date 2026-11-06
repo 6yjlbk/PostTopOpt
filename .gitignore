@@ -1,0 +1,23 @@
+
+# CMake build directories
+build/
+out/
+cmake-build-*/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+.vscode/
+
+# Compiler outputs
+*.obj
+*.pdb
+*.ilk
+*.exe
+*.lib
+*.dll
+
+# Temporary files
+*.tmp
+*.log
