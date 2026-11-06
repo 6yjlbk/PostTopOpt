@@ -1,0 +1,67 @@
+# PostTopOpt — Codex Instructions
+
+## Project overview
+
+PostTopOpt is a C++20 project for studying, implementing, and testing geometry extraction and post-processing algorithms in the context of topology optimization and CAE software.
+
+The initial focus is on Dual Contouring. Other algorithms, including Marching Cubes, smoothing, and remeshing, may be added later.
+
+The project should evolve into a reusable C++ static library rather than a single-purpose executable.
+
+## Technology stack
+
+- Language: C++20 or С++17
+- Build system: CMake
+- Linear algebra: Eigen
+- Testing: CTest
+- Platforms: Windows with GCC/MinGW and MSVC
+- IDEs: Visual Studio Code and Visual Studio 2022/Visual Studio 2019
+- Version control: Git
+
+## Project structure
+
+- `include/` — public C++ headers
+- `src/` — library implementations
+- `tests/` — tests and example programs
+- `docs/` — algorithm explanations, mathematical notes, and architectural decisions
+
+## Development rules
+
+1. Prefer clean, readable, modern C++20.
+2. Keep the implementation modular and reusable.
+3. Separate numerical algorithms from mesh data structures and file I/O.
+4. Use Eigen for linear algebra when appropriate.
+5. Avoid introducing unnecessary dependencies.
+6. Preserve compatibility with GCC and MSVC.
+7. Do not modify unrelated code.
+8. Prefer small, focused changes over large refactorings.
+9. Add or update tests when changing algorithmic behavior.
+10. Explain important mathematical and architectural decisions.
+
+## Dual Contouring guidelines
+
+The initial implementation should use a regular Cartesian grid.
+
+The intended algorithmic pipeline is:
+
+1. Scalar field representation and isovalue selection.
+2. Detection of sign-changing grid edges.
+3. Hermite data collection: intersection points and normals.
+4. QEF minimization for vertex placement.
+5. Mesh connectivity generation.
+6. Mesh validation and optional export.
+
+Pay particular attention to numerical robustness, degenerate configurations, mesh topology, sharp features, and preservation of thin structural members.
+
+Do not assume that a basic Dual Contouring implementation always produces manifold, watertight, or self-intersection-free meshes.
+
+## Collaboration rules
+
+- Before significant modifications, briefly explain the proposed approach.
+- Do not make major architectural decisions without discussing alternatives.
+- Do not commit or push changes unless explicitly requested.
+- Do not silently introduce new third-party libraries.
+- When a mathematical assumption is uncertain, state it explicitly.
+- Keep project documentation consistent with implemented behavior.
+
+Read `docs/decisions.md` and `docs/algorithm.md` when they are relevant and available.
