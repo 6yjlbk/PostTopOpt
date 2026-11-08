@@ -21,3 +21,6 @@ cmake-build-*/
 # Temporary files
 *.tmp
 *.log
+
+# Obsidian local configuration
+docs/.obsidian/
