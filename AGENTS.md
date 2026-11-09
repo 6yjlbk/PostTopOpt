@@ -4,13 +4,13 @@
 
 PostTopOpt is a C++20 project for studying, implementing, and testing geometry extraction and post-processing algorithms in the context of topology optimization and CAE software.
 
-The initial focus is on Dual Contouring. Other algorithms, including Marching Cubes, smoothing, and remeshing, may be added later.
+Implemented: regular-grid DC, emilk-inspired corner-plane DC, and classic Marching Cubes. Smoothing and remeshing remain future work.
 
-The project should evolve into a reusable C++ static library rather than a single-purpose executable.
+The project is a reusable C++ static library with separate example executables.
 
 ## Technology stack
 
-- Language: C++20 or С++17
+- Language: C++20 (required by the current build and examples)
 - Build system: CMake
 - Linear algebra: Eigen
 - Testing: CTest
@@ -22,8 +22,12 @@ The project should evolve into a reusable C++ static library rather than a singl
 
 - `include/` — public C++ headers
 - `src/` — library implementations
-- `tests/` — tests and example programs
+- `tests/` — numerical and integration tests
 - `docs/` — algorithm explanations, mathematical notes, and architectural decisions
+
+- examples/ — analytic fields and method-selection CLI
+- results/ — exported OBJ geometry, tracked separately from build artifacts
+- third_party/ — MC table attribution and license
 
 ## Development rules
 
@@ -40,9 +44,9 @@ The project should evolve into a reusable C++ static library rather than a singl
 
 ## Dual Contouring guidelines
 
-The initial implementation should use a regular Cartesian grid.
+The current extractors use a regular Cartesian grid.
 
-The intended algorithmic pipeline is:
+The classic DC pipeline is:
 
 1. Scalar field representation and isovalue selection.
 2. Detection of sign-changing grid edges.
@@ -65,3 +69,13 @@ Do not assume that a basic Dual Contouring implementation always produces manifo
 - Keep project documentation consistent with implemented behavior.
 
 Read `docs/decisions.md` and `docs/algorithm.md` when they are relevant and available.
+## Current implementation and documentation
+
+Read docs/mathematics.md for QEF modes, docs/method_comparison.md for measurements
+and defects, and docs/experiment_plan.md for proposals that are not yet implemented.
+Both DC variants share SVD and four combinations of regularization/cell constraints.
+Defaults: regularization=1e-6, constrainToCell=true. The emilk-inspired variant
+changes planes, not the solver. MC uses no QEF. Constrained QEF and MC already exist.
+Separate visual observations from measurements and proposals from accepted dependencies.
+Preserve attribution and license notices. Examples default to project-root results/;
+build caches remain excluded from Git.
