@@ -31,6 +31,8 @@ target_include_directories(PostTopOpt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 target_link_libraries(PostTopOpt PUBLIC Eigen3::Eigen)
 add_executable(PostTopOptDemo examples/sphere.cpp)
 target_link_libraries(PostTopOptDemo PRIVATE PostTopOpt)
+target_compile_definitions(PostTopOptDemo PRIVATE
+    POSTTOPOPT_RESULTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/results")
 include(CTest)
 if(BUILD_TESTING)
     add_executable(PostTopOptTest tests/dual_contouring.cpp)
@@ -51,9 +53,11 @@ foreach(example IN ITEMS Torus SphereUnion DrilledBox Gyroid)
     endif()
     add_executable(PostTopOpt${example} examples/${example_source}.cpp)
     target_link_libraries(PostTopOpt${example} PRIVATE PostTopOpt)
+target_compile_definitions(PostTopOpt${example} PRIVATE
+    POSTTOPOPT_RESULTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/results")
     if(BUILD_TESTING)
         add_test(NAME Example${example}
-                 COMMAND PostTopOpt${example} "${CMAKE_CURRENT_BINARY_DIR}/${example_source}.obj")
+                 COMMAND PostTopOpt${example} "${CMAKE_CURRENT_SOURCE_DIR}/results/${example_source}.obj")
     endif()
 endforeach()
 
@@ -64,7 +68,7 @@ if(BUILD_TESTING)
     foreach(shape IN ITEMS SphereUnion DrilledBox Gyroid)
         foreach(method IN ITEMS dc emilk mc)
             add_test(NAME Compare${shape}_${method}
-                COMMAND PostTopOpt${shape} "${CMAKE_CURRENT_BINARY_DIR}/${shape}_${method}.obj" --method ${method})
+                COMMAND PostTopOpt${shape} "${CMAKE_CURRENT_SOURCE_DIR}/results/${shape}_${method}.obj" --method ${method})
         endforeach()
     endforeach()
     add_test(NAME InvalidMethodCLI COMMAND PostTopOptSphereUnion --method invalid)

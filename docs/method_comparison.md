@@ -4,13 +4,14 @@
 
 Во всех примерах доступны `--method dc`, `--method emilk`, `--method mc`.
 Без ключа используется прежний DC. Старый вызов с одним путём OBJ сохранён.
-Без пути новые методы добавляют суффикс к имени: например gyroid_emilk.obj.
+Без пути файлы сохраняются в results/ в корне проекта; новые методы добавляют
+суффикс к имени: например gyroid_emilk.obj. Каталог создаётся автоматически.
 Область, шаг, поле и заданный аналитический градиент остаются свойствами фигуры.
 
 ```powershell
-.\build\PostTopOptGyroid.exe build/gyroid_dc.obj --method dc
-.\build\PostTopOptGyroid.exe build/gyroid_emilk.obj --method emilk
-.\build\PostTopOptGyroid.exe build/gyroid_mc.obj --method mc
+.\build\PostTopOptGyroid.exe results/gyroid_dc.obj --method dc
+.\build\PostTopOptGyroid.exe results/gyroid_emilk.obj --method emilk
+.\build\PostTopOptGyroid.exe results/gyroid_mc.obj --method mc
 ```
 
 Вместо PostTopOptGyroid можно использовать PostTopOptSphereUnion,
@@ -102,8 +103,8 @@ cmake --build build --parallel 4
 ctest --test-dir build -R "^(ExtractionMethodsTest|InvalidMethodCLI|Compare.*)$" --output-on-failure
 ```
 
-Файлы: build/SphereUnion_{dc,emilk,mc}.obj,
-build/DrilledBox_{dc,emilk,mc}.obj, build/Gyroid_{dc,emilk,mc}.obj.
+Файлы: results/SphereUnion_{dc,emilk,mc}.obj,
+results/DrilledBox_{dc,emilk,mc}.obj, results/Gyroid_{dc,emilk,mc}.obj.
 
 | Фигура | Метод | Вершины | Грани | Извлечение, мс |
 | --- | --- | ---: | ---: | ---: |

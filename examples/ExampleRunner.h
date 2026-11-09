@@ -38,7 +38,7 @@ inline int run(int argc, char** argv, const char* defaultPath,
         }
         const auto method=geometry::parseMethod(methodName);
         if (path.empty()) {
-            path=defaultPath;
+            path=std::filesystem::path(POSTTOPOPT_RESULTS_DIR)/defaultPath;
             // Preserve the old DC default; separate the new methods' outputs.
             if (methodName!="dc")
                 path=path.parent_path()/(path.stem().string()+"_"+methodName+path.extension().string());
@@ -49,6 +49,8 @@ inline int run(int argc, char** argv, const char* defaultPath,
             std::chrono::steady_clock::now()-begin).count();
         if (mesh.vertices.empty() || (mesh.quads.empty() && mesh.triangles.empty()))
             throw std::runtime_error("Example produced an empty surface");
+        if (!path.parent_path().empty())
+            std::filesystem::create_directories(path.parent_path());
         geometry::writeObj(mesh,path);
         std::cout << methodName << ": " << mesh.vertices.size() << " vertices, "
                   << mesh.quads.size() << " quads, " << mesh.triangles.size()

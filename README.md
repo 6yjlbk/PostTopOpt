@@ -11,7 +11,7 @@ C++20 библиотека извлечения изоповерхностей �
 cmake -S . -B build -G "MinGW Makefiles"
 cmake --build build
 ctest --test-dir build --output-on-failure
-.\build\PostTopOptDemo.exe build/sphere.obj
+.\build\PostTopOptDemo.exe results/sphere.obj
 ```
 
 Для Visual Studio используется отдельный каталог сборки и генератор Visual Studio; при запуске CTest указывается конфигурация, например `ctest --test-dir build-msvc -C Debug`. Сборка MSVC в текущей проверке не выполнялась.

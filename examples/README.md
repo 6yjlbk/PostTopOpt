@@ -17,15 +17,18 @@
 cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 4
 ctest --test-dir build --output-on-failure
-.\build\PostTopOptDemo.exe build/sphere.obj
-.\build\PostTopOptTorus.exe build/torus.obj
-.\build\PostTopOptSphereUnion.exe build/sphere_union.obj
-.\build\PostTopOptDrilledBox.exe build/drilled_box.obj
-.\build\PostTopOptGyroid.exe build/gyroid.obj
+.\build\PostTopOptDemo.exe results/sphere.obj
+.\build\PostTopOptTorus.exe results/torus.obj
+.\build\PostTopOptSphereUnion.exe results/sphere_union.obj
+.\build\PostTopOptDrilledBox.exe results/drilled_box.obj
+.\build\PostTopOptGyroid.exe results/gyroid.obj
 ```
 
-Без аргумента OBJ записывается в текущую рабочую папку. Каталог назначения
-должен существовать. Для Visual Studio исполняемые файлы находятся в каталоге
+Без аргумента OBJ записывается в results/ в корне проекта независимо от текущей
+рабочей папки. Каталог создаётся автоматически. Явный путь по-прежнему имеет
+приоритет; относительный явный путь отсчитывается от текущей рабочей папки.
+Путь по умолчанию задаётся CMake при сборке: после переноса проекта на другой
+компьютер нужно выполнить конфигурацию и сборку заново. Для Visual Studio исполняемые файлы находятся в каталоге
 конфигурации, например build-msvc/Release; CTest запускается с -C Release.
 
 В новых примерах параметры области задаются явно через ExampleRunner.h.
@@ -62,5 +65,5 @@ examples/density_grid.cpp и tests/data/ с маленькими эталонн�
 ## Выбор алгоритма
 
 Ключ --method dc|emilk|mc доступен всем пяти фигурам; по умолчанию dc.
-Например: ` .\build\PostTopOptGyroid.exe build/gyroid_mc.obj --method mc `.
+Например: ` .\build\PostTopOptGyroid.exe results/gyroid_mc.obj --method mc `.
 Полные команды, формулы и результаты: [сравнение методов](../docs/method_comparison.md).
