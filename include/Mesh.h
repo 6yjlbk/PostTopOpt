@@ -4,9 +4,9 @@
 #include <cstddef>
 #include <vector>
 namespace geometry {
-using Vec3 = Eigen::Vector3d;
+using Vec3 = Eigen::Vector3d; // Вектор из 3х чисел типа вектор
 struct Mesh {
-    std::vector<Vec3> vertices;
-    std::vector<std::array<std::size_t, 4>> quads;
+    std::vector<Vec3> vertices; // Хранит координаты вершин поверхности
+    std::vector<std::array<std::size_t, 4>> quads; // quads[] хранит четверки индексов этих вершин
 };
 }

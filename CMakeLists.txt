@@ -16,7 +16,7 @@ set(EIGEN_INSTALL OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     Eigen
     GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-    GIT_TAG 3.4.1
+    GIT_TAG 3.4.1 ## Версия Eigen 3.4.1
     GIT_SHALLOW TRUE
 )
 
