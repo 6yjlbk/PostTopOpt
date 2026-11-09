@@ -17,10 +17,11 @@ std::size_t product(const std::array<int,3>& n) {
 }
 // Solve relative to the intersection centroid to stabilize rank-deficient cells.
 Vec3 place(const std::vector<Vec3>& points, const std::vector<Vec3>& normals,
-           const Vec3& lo, const Vec3& hi, const ContourOptions& options) {
+           const Vec3& lo, const Vec3& hi, const ContourOptions& options, const Vec3* anchor = nullptr) {
     Vec3 center = Vec3::Zero();
     for (const auto& p : points) center += p;
     center /= static_cast<double>(points.size());
+    if (anchor) center = *anchor;
     const auto count = static_cast<Eigen::Index>(points.size());
     Eigen::MatrixXd a(count + 3, 3);
     Eigen::VectorXd b(count + 3);
@@ -61,8 +62,8 @@ Vec3 place(const std::vector<Vec3>& points, const std::vector<Vec3>& normals,
     return options.constrainToCell ? best.cwiseMax(lo).cwiseMin(hi) : best;
 }
 }
-Mesh dualContour(const Grid& grid, const Field& field, const Gradient& gradient,
-                 const ContourOptions& options) {
+static Mesh dualContourImpl(const Grid& grid, const Field& field, const Gradient& gradient,
+                            const ContourOptions& options, bool cornerPlanes) {
     if (!field || !grid.origin.allFinite() || !grid.spacing.allFinite() ||
         (grid.spacing.array()<=0).any() || !std::isfinite(options.isovalue) ||
         !std::isfinite(options.regularization) || options.regularization<0 ||
@@ -89,11 +90,26 @@ Mesh dualContour(const Grid& grid, const Field& field, const Gradient& gradient,
     for(int x=0;x<nodes[0];++x) for(int y=0;y<nodes[1];++y) for(int z=0;z<nodes[2];++z)
         values[index(x,y,z,nodes)]=evaluate(position(x,y,z));
     const auto value=[&](int x,int y,int z) { return values[index(x,y,z,nodes)]; };
+    const auto derivative = [&](const Vec3& p) -> Vec3 {
+        Vec3 n;
+        if (gradient) n=gradient(p);
+        else for (int d=0; d<3; ++d) {
+            Vec3 delta=Vec3::Zero(); delta[d]=options.gradientStep;
+            n[d]=(evaluate(p+delta)-evaluate(p-delta))/(2*options.gradientStep);
+        }
+        const double length=n.stableNorm();
+        if (!n.allFinite() || !std::isfinite(length) || length<=1e-14)
+            throw std::invalid_argument("Undefined normal at a constraint sample");
+        return n;
+    };
     const auto missing=std::numeric_limits<std::size_t>::max();
     std::vector<std::size_t> ids(product(grid.cells),missing);
     Mesh mesh;
     for(int x=0;x<grid.cells[0];++x) for(int y=0;y<grid.cells[1];++y) for(int z=0;z<grid.cells[2];++z) {
         std::vector<Vec3> points,normals;
+        Vec3 intersectionCenter=Vec3::Zero();
+        int intersections=0;
+        std::array<bool,8> usedCorners{};
         for(int axis=0;axis<3;++axis) for(int u=0;u<2;++u) for(int v=0;v<2;++v) {
             std::array<int,3> start{x,y,z};
             start[(axis+1)%3]+=u; start[(axis+2)%3]+=v;
@@ -104,21 +120,36 @@ Mesh dualContour(const Grid& grid, const Field& field, const Gradient& gradient,
             double scale=std::max(std::abs(f0),std::abs(f1));
             double t=(f0/scale)/((f0/scale)-(f1/scale));
             Vec3 p=position(start[0],start[1],start[2]); p[axis]+=t*grid.spacing[axis];
-            Vec3 n;
-            if (gradient) n=gradient(p);
-            else for(int d=0;d<3;++d) {
-                Vec3 delta=Vec3::Zero(); delta[d]=options.gradientStep;
-                n[d]=(evaluate(p+delta)-evaluate(p-delta))/(2*options.gradientStep);
+            intersectionCenter+=p;
+            ++intersections;
+            if (!cornerPlanes) {
+                const Vec3 n=derivative(p);
+                points.push_back(p); normals.push_back(n/n.stableNorm());
+            } else {
+                // Unique corners incident to sign-changing edges (not repeated per edge).
+                // Linearization: g(q).(x-q) + f(q)-iso = 0.
+                for (const auto& endpoint : {start,end}) {
+                    const int corner=(endpoint[0]-x)*4+(endpoint[1]-y)*2+(endpoint[2]-z);
+                    if (usedCorners[corner]) continue;
+                    usedCorners[corner]=true;
+                    const Vec3 q=position(endpoint[0],endpoint[1],endpoint[2]);
+                    const Vec3 g=derivative(q);
+                    const double length=g.stableNorm();
+                    const Vec3 normal=g/length;
+                    const double distance=value(endpoint[0],endpoint[1],endpoint[2])/length;
+                    const Vec3 projected=q-distance*normal;
+                    if (!projected.allFinite()) throw std::invalid_argument("Invalid corner projection");
+                    points.push_back(projected); normals.push_back(normal);
+                }
             }
-            const double length=n.stableNorm();
-            if (!n.allFinite() || !std::isfinite(length) || length<=1e-14)
-                throw std::invalid_argument("Undefined normal at an intersection");
-            points.push_back(p); normals.push_back(n/length);
         }
         if(points.empty()) continue;
         ids[index(x,y,z,grid.cells)]=mesh.vertices.size();
         Vec3 lo=position(x,y,z);
-        mesh.vertices.push_back(place(points,normals,lo,lo+grid.spacing,options));
+        intersectionCenter/=static_cast<double>(intersections);
+        // Same anchor, solver and box constraints for both DC modes.
+        mesh.vertices.push_back(place(points,normals,lo,lo+grid.spacing,options,
+                                      cornerPlanes ? &intersectionCenter : nullptr));
     }
     // Cyclic transverse axes give a +axis orientation. Reverse when outside is at the start.
     for(int axis=0;axis<3;++axis) {
@@ -140,5 +171,14 @@ Mesh dualContour(const Grid& grid, const Field& field, const Gradient& gradient,
         }
     }
     return mesh;
+}
+
+Mesh dualContour(const Grid& grid, const Field& field, const Gradient& gradient,
+                 const ContourOptions& options) {
+    return dualContourImpl(grid,field,gradient,options,false);
+}
+Mesh dualContourEmilk(const Grid& grid, const Field& field, const Gradient& gradient,
+                      const ContourOptions& options) {
+    return dualContourImpl(grid,field,gradient,options,true);
 }
 }

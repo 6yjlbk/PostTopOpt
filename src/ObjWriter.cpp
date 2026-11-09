@@ -19,6 +19,14 @@ void writeObj(const Mesh& mesh, const std::filesystem::path& path) {
         }
         out << '\n';
     }
+    for (const auto& triangle : mesh.triangles) {
+        out << "f";
+        for (auto i : triangle) {
+            if (i >= mesh.vertices.size()) throw std::invalid_argument("Invalid face index");
+            out << ' ' << i + 1;
+        }
+        out << '\n';
+    }
     if (!out) throw std::runtime_error("Cannot write OBJ output");
 }
 }

@@ -17,4 +17,7 @@ using Field = std::function<double(const Vec3&)>; // Функция скаляр
 using Gradient = std::function<Vec3(const Vec3&)>; // Функция градиента
 // Negative values relative to isovalue denote the interior. Boundaries are not capped.
 Mesh dualContour(const Grid&, const Field&, const Gradient& = {}, const ContourOptions& = {});
+// Emilk-inspired corner-plane variant. Gradient must be the actual derivative,
+// not just a unit normal, for fields that are not signed distance functions.
+Mesh dualContourEmilk(const Grid&, const Field&, const Gradient& = {}, const ContourOptions& = {});
 }
