@@ -62,7 +62,7 @@ Vec3 place(const std::vector<Vec3>& points, const std::vector<Vec3>& normals,
     return options.constrainToCell ? best.cwiseMax(lo).cwiseMin(hi) : best;
 }
 }
-static Mesh dualContourImpl(const Grid& grid, const Field& field, const Gradient& gradient,
+static Mesh dualContourImpl(const Grid& grid, const Field& field, const Gradient& gradient, //Общая внутренняя функция. Для обычного DC  bool cornerPlanes = false, для модифицированного DC bool cornerPlanes = true
                             const ContourOptions& options, bool cornerPlanes) {
     if (!field || !grid.origin.allFinite() || !grid.spacing.allFinite() ||
         (grid.spacing.array()<=0).any() || !std::isfinite(options.isovalue) ||

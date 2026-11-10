@@ -2,7 +2,7 @@
 #include "Mesh.h"
 #include <functional>
 namespace geometry {
-struct Grid {
+struct Grid { // Настройки Grid по умолчанию.
     Vec3 origin = Vec3(-3, -3, -3); // Начало СК, из которой строится AABB
     Vec3 spacing = Vec3::Constant(0.1); // Шаг сетки
     std::array<int, 3> cells{80, 80, 80}; //Кол-во элементов по каждой из осей
@@ -16,8 +16,8 @@ struct ContourOptions {
 using Field = std::function<double(const Vec3&)>; // Функция скалярного поля
 using Gradient = std::function<Vec3(const Vec3&)>; // Функция градиента
 // Negative values relative to isovalue denote the interior. Boundaries are not capped.
-Mesh dualContour(const Grid&, const Field&, const Gradient& = {}, const ContourOptions& = {});
+Mesh dualContour(const Grid&, const Field&, const Gradient& = {}, const ContourOptions& = {}); // Стандартный алгоритм DC. На выходе получаем сетку типа mesh 
 // Emilk-inspired corner-plane variant. Gradient must be the actual derivative,
 // not just a unit normal, for fields that are not signed distance functions.
-Mesh dualContourEmilk(const Grid&, const Field&, const Gradient& = {}, const ContourOptions& = {});
+Mesh dualContourEmilk(const Grid&, const Field&, const Gradient& = {}, const ContourOptions& = {}); // Модифицированный алгоритм DC с вычислением двух Hermite points. На выходе получаем сетку типа mesh 
 }

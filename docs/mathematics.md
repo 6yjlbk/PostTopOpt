@@ -147,7 +147,7 @@ auto mesh = geometry::dualContour(grid, field, gradient, options);
 // Для другого источника плоскостей: dualContourEmilk(..., options).
 ~~~
 
-CLI примеров пока выбирает только dc/emilk/mc.
+CLI примеров выбирает dc/emilk/mc/cgal-dc.
 Для параметров QEF нужно изменить C++ вызов; изменение одних ContourOptions
 без передачи их через API не меняет результат.
 
@@ -163,3 +163,10 @@ QR, отдельный решатель нормальных уравнений,
 [BorisTheBrave/qef.py](https://github.com/BorisTheBrave/mc-dc/blob/a165b326849d8814fb03c963ad33a9faf6cc6dea/qef.py),
 [Gildea/qef_simd.h](https://github.com/nickgildea/fast_dual_contouring/blob/master/qef_simd.h).
 Они не означают наличие этих реализаций в проекте.
+
+
+## Дополнение: CGAL, 10 ноября 2026
+
+Добавлен необязательный метод cgal-dc. Собственные DC, emilk и MC сохранены.
+CGAL имеет отдельный решатель QEF и соглашение о нуле; описание общего
+решателя собственных DC к нему не относится. [Сборка, различия и проверки](cgal.md).

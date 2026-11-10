@@ -79,3 +79,10 @@ changes planes, not the solver. MC uses no QEF. Constrained QEF and MC already e
 Separate visual observations from measurements and proposals from accepted dependencies.
 Preserve attribution and license notices. Examples default to project-root results/;
 build caches remain excluded from Git.
+
+
+## Дополнение: CGAL, 10 ноября 2026
+
+Добавлен необязательный метод cgal-dc. Собственные DC, emilk и MC сохранены.
+CGAL имеет отдельный решатель QEF и соглашение о нуле; описание общего
+решателя собственных DC к нему не относится. [Сборка, различия и проверки](docs/cgal.md).
