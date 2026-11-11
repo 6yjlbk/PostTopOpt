@@ -99,3 +99,12 @@ add_executable(PostTopOptGradientComparison examples/gradient_comparison.cpp)
 target_link_libraries(PostTopOptGradientComparison PRIVATE PostTopOpt)
 target_compile_definitions(PostTopOptGradientComparison PRIVATE
     POSTTOPOPT_RESULTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/results")
+
+# Cone examples share the standard CLI; select emilk with --method emilk.
+foreach(mode IN ITEMS Numeric Analytic)
+    add_executable(PostTopOptCone${mode} examples/cone.cpp)
+    target_link_libraries(PostTopOptCone${mode} PRIVATE PostTopOpt)
+    target_compile_definitions(PostTopOptCone${mode} PRIVATE
+        POSTTOPOPT_RESULTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/results")
+endforeach()
+target_compile_definitions(PostTopOptConeAnalytic PRIVATE POSTTOPOPT_CONE_ANALYTIC=1)

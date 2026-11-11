@@ -18,9 +18,9 @@ int main(int argc, char** argv) {
             analytic=[](const geometry::Vec3& p)->geometry::Vec3 {
                 const double r=p.norm();
                 if (r==0) throw std::invalid_argument("Sphere gradient undefined at center");
-                return p/r;
+                return p/r; // gradient
             };
-        } else {
+        } else { //Cone
             // Solid cone: R=1, H=2, base z=0, apex z=2.
             // f=max(r + (R/H)*z - R, -z). f<0 implies 0<z<H,
             // so a separate z-H cap is redundant and is deliberately omitted.
@@ -42,9 +42,9 @@ int main(int argc, char** argv) {
             };
         }
         geometry::CgalContourOptions options;
-        options.bisection=true; // Биссекция in both comparisons.
+        options.bisection=false; // Биссекция in both comparisons.
         options.isovalue=0;
-        options.constrainToCell=true;
+        options.constrainToCell=false;
         options.gradientStep=1e-5;
         const geometry::Gradient gradient=mode=="analytic" ? analytic : geometry::Gradient{};
         const auto begin=std::chrono::steady_clock::now();

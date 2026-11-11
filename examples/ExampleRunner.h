@@ -9,9 +9,9 @@
 namespace examples {
 inline geometry::Grid grid(double halfExtent, int cells) {
     geometry::Grid result;
-    result.origin = geometry::Vec3::Constant(-halfExtent); // Начало СК, из которой строится AABB
-    result.spacing = geometry::Vec3::Constant(2 * halfExtent / cells); // Шаг сетки
-    result.cells = {cells, cells, cells}; //Кол-во элементов по каждой из осей
+    result.origin = geometry::Vec3::Constant(-halfExtent); // РќР°С‡Р°Р»Рѕ РЎРљ, РёР· РєРѕС‚РѕСЂРѕР№ СЃС‚СЂРѕРёС‚СЃСЏ AABB
+    result.spacing = geometry::Vec3::Constant(2 * halfExtent / cells); // РЁР°Рі СЃРµС‚РєРё
+    result.cells = {cells, cells, cells}; //РљРѕР»-РІРѕ СЌР»РµРјРµРЅС‚РѕРІ РїРѕ РєР°Р¶РґРѕР№ РёР· РѕСЃРµР№
     return result;
 }
 
@@ -24,15 +24,15 @@ inline int run(int argc, char** argv, const char* defaultPath,
         for (int i=1; i<argc; ++i) {
             const std::string argument=argv[i];
             if (argument=="--help") {
-                std::cout << "Usage: executable [output.obj] [--method dc|emilk|mc|cgal-dc]\n";
+                std::cout << "Usage: executable [output.obj] [--method dc|emilk|mc|cgal-dc|cgal-dc-octree]\n";
                 return 0;
             }
             if (argument=="--method") {
-                if (++i==argc) throw std::invalid_argument("--method requires dc, emilk, mc or cgal-dc");
+                if (++i==argc) throw std::invalid_argument("--method requires dc, emilk, mc, cgal-dc or cgal-dc-octree");
                 methodName=argv[i];
             } else {
                 if (argument.starts_with("--") || !path.empty())
-                    throw std::invalid_argument("Usage: executable [output.obj] [--method dc|emilk|mc|cgal-dc]");
+                    throw std::invalid_argument("Usage: executable [output.obj] [--method dc|emilk|mc|cgal-dc|cgal-dc-octree]");
                 path=argument;
             }
         }

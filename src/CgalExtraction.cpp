@@ -1,10 +1,12 @@
 #include "CgalExtraction.h"
 #include <cmath>
+#include <type_traits>
 #include <limits>
 #include <stdexcept>
 #ifdef POSTTOPOPT_WITH_CGAL
 #include <CGAL/Simple_cartesian.h>
 #include <CGAL/Isosurfacing_3/Cartesian_grid_3.h>
+#include <CGAL/Isosurfacing_3/Octree_partition.h>
 #include <CGAL/Isosurfacing_3/Value_function_3.h>
 #include <CGAL/Isosurfacing_3/Gradient_function_3.h>
 #include <CGAL/Isosurfacing_3/Dual_contouring_domain_3.h>
@@ -67,24 +69,55 @@ Mesh cgalDualContour(const Grid& grid, const Field& field, const Gradient& gradi
         g/=length;
         return Vector(g.x(),g.y(),g.z());
     };
-    // CGAL expects NODE counts, whereas our Grid stores CELL counts.
-    CGrid partition(Point(grid.origin.x(),grid.origin.y(),grid.origin.z()),
-                    Point(hi.x(),hi.y(),hi.z()),dimensions);
-    CGAL::Isosurfacing::Value_function_3<CGrid> values(value,partition);
-    CGAL::Isosurfacing::Gradient_function_3<CGrid> gradients(normal,partition);
     std::vector<Point> points;
     std::vector<std::vector<std::size_t>> polygons;
-    const auto extract = [&](const auto& intersectionOracle) {
-        const auto domain=CGAL::Isosurfacing::create_dual_contouring_domain_3(
-            partition,values,gradients,intersectionOracle);
-        CGAL::Isosurfacing::dual_contouring<CGAL::Sequential_tag>(
-            domain,options.isovalue,points,polygons,
-            CGAL::parameters::do_not_triangulate_faces(true).constrain_to_cell(options.constrainToCell));
+    const auto extractPartition = [&](const auto& partition) {
+        using Partition=std::decay_t<decltype(partition)>;
+        CGAL::Isosurfacing::Value_function_3<Partition> values(value,partition);
+        CGAL::Isosurfacing::Gradient_function_3<Partition> gradients(normal,partition);
+        const auto extract = [&](const auto& intersectionOracle) {
+            const auto domain=CGAL::Isosurfacing::create_dual_contouring_domain_3(
+                partition,values,gradients,intersectionOracle);
+            CGAL::Isosurfacing::dual_contouring<CGAL::Sequential_tag>(
+                domain,options.isovalue,points,polygons,
+                CGAL::parameters::do_not_triangulate_faces(true).constrain_to_cell(options.constrainToCell));
+        };
+        if (options.bisection)
+            extract(CGAL::Isosurfacing::Dichotomy_edge_intersection{}); // Биссекция.
+        else
+            extract(CGAL::Isosurfacing::Linear_interpolation_edge_intersection{});
     };
-    if (options.bisection)
-        extract(CGAL::Isosurfacing::Dichotomy_edge_intersection{}); // Биссекция: имя типа задано CGAL.
-    else
-        extract(CGAL::Isosurfacing::Linear_interpolation_edge_intersection{});
+    if (options.octree) {
+        if (options.octreeMinDepth>options.octreeMaxDepth || options.octreeMaxDepth>20)
+            throw std::invalid_argument("Octree requires minDepth <= maxDepth <= 20");
+        using Octree=CGAL::Octree<Kernel,std::vector<Point>>;
+        std::vector<Point> bounds{
+            Point(grid.origin.x(),grid.origin.y(),grid.origin.z()),
+            Point(hi.x(),hi.y(),hi.z())};
+        Octree partition(bounds);
+        // Experimental sign-based refinement, as in CGAL's contouring_octree example.
+        // Equal-sign corners can hide a surface; mixed depths can produce cracks.
+        partition.refine([&](const Octree::Node_index& node,const Octree& tree) {
+            if (tree.depth(node)<options.octreeMinDepth) return true;
+            if (tree.depth(node)>=options.octreeMaxDepth) return false;
+            const auto box=tree.bbox(node);
+            bool inside=false,outside=false;
+            for (double x : {box.xmin(),box.xmax()})
+                for (double y : {box.ymin(),box.ymax()})
+                    for (double z : {box.zmin(),box.zmax()}) {
+                        const double v=value(Point(x,y,z));
+                        inside |= v<=options.isovalue;
+                        outside |= v>options.isovalue;
+                    }
+            return inside && outside;
+        });
+        extractPartition(partition);
+    } else {
+        // CGAL expects NODE counts, whereas our Grid stores CELL counts.
+        CGrid partition(Point(grid.origin.x(),grid.origin.y(),grid.origin.z()),
+                        Point(hi.x(),hi.y(),hi.z()),dimensions);
+        extractPartition(partition);
+    }
     Mesh mesh;
     mesh.vertices.reserve(points.size());
     for (const auto& p:points) {

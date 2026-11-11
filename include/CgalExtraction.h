@@ -5,7 +5,10 @@ struct CgalContourOptions {
     double isovalue = 0;
     bool constrainToCell = true;
     double gradientStep = 1e-5;
-    bool bisection = true; // false — линейная интерполяция, true — биссекция
+    bool bisection = true;  // false — линейная интерполяция, true — биссекция
+    bool octree = false;
+    unsigned int octreeMinDepth = 3; // Uniform initial refinement.
+    unsigned int octreeMaxDepth = 8; // Refine sign-changing cells up to this depth.
 };
 bool cgalAvailable() noexcept;
 // CGAL uses its own vertex solver; no mapping of our QEF regularization.

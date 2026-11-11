@@ -9,9 +9,12 @@ struct Grid { // Настройки Grid по умолчанию.
 };
 struct ContourOptions {
     double isovalue = 0; // Уровень поля, поверхность которого извлекается f(x) = isovalue; далее f(x) вычитается из значений поля в каждой ячейки
-    double regularization = 1e-6; // Штраф при размещении вершины вдали от ее среднеого положения
-    bool constrainToCell = true; // Требование оставить вершину внутри своей ячейки
+    // double regularization = 1e-6; // Штраф при размещении вершины вдали от ее среднеого положения
+    // bool constrainToCell = true; // Требование оставить вершину внутри своей ячейки
     double gradientStep = 1e-5; // 	Шаг численного вычисления градиента, если он не передан
+    double regularization = 0.001; // Штраф при размещении вершины вдали от ее среднеого положения
+    bool constrainToCell = true; // Требование оставить вершину внутри своей ячейки
+    bool bisection = true; // true — биссекция, false — линейная интерполяция (dc/emilk)
 };
 using Field = std::function<double(const Vec3&)>; // Функция скалярного поля
 using Gradient = std::function<Vec3(const Vec3&)>; // Функция градиента

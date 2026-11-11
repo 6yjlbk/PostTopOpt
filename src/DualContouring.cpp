@@ -116,10 +116,30 @@ static Mesh dualContourImpl(const Grid& grid, const Field& field, const Gradient
             auto end=start; ++end[axis];
             double f0=value(start[0],start[1],start[2]), f1=value(end[0],end[1],end[2]);
             if ((f0<0)==(f1<0)) continue;
-            // Scaling avoids overflow when opposite finite values have a huge magnitude.
-            double scale=std::max(std::abs(f0),std::abs(f1));
-            double t=(f0/scale)/((f0/scale)-(f1/scale));
-            Vec3 p=position(start[0],start[1],start[2]); p[axis]+=t*grid.spacing[axis];
+            Vec3 p=position(start[0],start[1],start[2]);
+            if (options.bisection) {
+                Vec3 left=p, right=position(end[0],end[1],end[2]);
+                // Preserve exact endpoint roots. Otherwise use CGAL's default
+                // iteration limit and field-residual tolerance for comparison.
+                if (f0==0) p=left;
+                else if (f1==0) p=right;
+                else {
+                    const bool leftInside=f0<0;
+                    const double tolerance=std::max(1e-7,std::abs(options.isovalue)*1e-7);
+                    for (int iteration=0;iteration<10;++iteration) {
+                        p=left+0.5*(right-left);
+                        const double residual=evaluate(p);
+                        if (std::abs(residual)<tolerance) break;
+                        if ((residual<0)==leftInside) left=p;
+                        else right=p;
+                    }
+                }
+            } else {
+                // Scaling avoids overflow for opposite finite values.
+                const double scale=std::max(std::abs(f0),std::abs(f1));
+                const double t=(f0/scale)/((f0/scale)-(f1/scale));
+                p[axis]+=t*grid.spacing[axis];
+            }
             intersectionCenter+=p;
             ++intersections;
             if (!cornerPlanes) {
