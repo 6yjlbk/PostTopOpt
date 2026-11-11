@@ -72,13 +72,19 @@ Mesh cgalDualContour(const Grid& grid, const Field& field, const Gradient& gradi
                     Point(hi.x(),hi.y(),hi.z()),dimensions);
     CGAL::Isosurfacing::Value_function_3<CGrid> values(value,partition);
     CGAL::Isosurfacing::Gradient_function_3<CGrid> gradients(normal,partition);
-    const auto domain=CGAL::Isosurfacing::create_dual_contouring_domain_3(
-        partition,values,gradients,CGAL::Isosurfacing::Linear_interpolation_edge_intersection{});
     std::vector<Point> points;
     std::vector<std::vector<std::size_t>> polygons;
-    CGAL::Isosurfacing::dual_contouring<CGAL::Sequential_tag>(
-        domain,options.isovalue,points,polygons,
-        CGAL::parameters::do_not_triangulate_faces(true).constrain_to_cell(options.constrainToCell));
+    const auto extract = [&](const auto& intersectionOracle) {
+        const auto domain=CGAL::Isosurfacing::create_dual_contouring_domain_3(
+            partition,values,gradients,intersectionOracle);
+        CGAL::Isosurfacing::dual_contouring<CGAL::Sequential_tag>(
+            domain,options.isovalue,points,polygons,
+            CGAL::parameters::do_not_triangulate_faces(true).constrain_to_cell(options.constrainToCell));
+    };
+    if (options.bisection)
+        extract(CGAL::Isosurfacing::Dichotomy_edge_intersection{}); // Биссекция: имя типа задано CGAL.
+    else
+        extract(CGAL::Isosurfacing::Linear_interpolation_edge_intersection{});
     Mesh mesh;
     mesh.vertices.reserve(points.size());
     for (const auto& p:points) {

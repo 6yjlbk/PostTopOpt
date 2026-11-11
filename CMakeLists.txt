@@ -93,3 +93,9 @@ if(BUILD_TESTING)
         endforeach()
     endif()
 endif()
+
+# Manual four-run gradient experiment; intentionally not registered with CTest.
+add_executable(PostTopOptGradientComparison examples/gradient_comparison.cpp)
+target_link_libraries(PostTopOptGradientComparison PRIVATE PostTopOpt)
+target_compile_definitions(PostTopOptGradientComparison PRIVATE
+    POSTTOPOPT_RESULTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/results")
