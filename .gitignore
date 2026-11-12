@@ -26,3 +26,6 @@ cmake-build-*/
 docs/.obsidian/
 # Wavefront geometry exported by the examples (not compiler object files)
 !/results/**/*.obj
+
+# Additional CMake build directories
+build-*/

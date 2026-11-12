@@ -108,3 +108,23 @@ foreach(mode IN ITEMS Numeric Analytic)
         POSTTOPOPT_RESULTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/results")
 endforeach()
 target_compile_definitions(PostTopOptConeAnalytic PRIVATE POSTTOPOPT_CONE_ANALYTIC=1)
+
+# Optional PLY import; VTK remains separate from the extraction core.
+option(POSTTOPOPT_WITH_VTK "Enable VTK-based PLY import and diagnostics" OFF)
+if(POSTTOPOPT_WITH_VTK)
+    find_package(nlohmann_json CONFIG REQUIRED)
+    find_package(VTK 9.0 REQUIRED COMPONENTS CommonCore CommonDataModel FiltersCore IOPLY)
+    add_library(PostTopOptVtk STATIC src/PlyImporter.cpp src/PlyDistanceField.cpp)
+    target_link_libraries(PostTopOptVtk PUBLIC PostTopOpt PRIVATE
+        VTK::CommonCore VTK::CommonDataModel VTK::FiltersCore VTK::IOPLY)
+    add_executable(PostTopOptPlyImport examples/ply_import.cpp)
+    target_link_libraries(PostTopOptPlyImport PRIVATE PostTopOptVtk)
+    target_compile_definitions(PostTopOptPlyImport PRIVATE
+        POSTTOPOPT_EXAMPLES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/examples")
+    add_executable(PostTopOptPlyExtract examples/ply_extract.cpp)
+    target_link_libraries(PostTopOptPlyExtract PRIVATE PostTopOptVtk)
+    target_compile_definitions(PostTopOptPlyExtract PRIVATE
+        POSTTOPOPT_RESULTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/results")
+    vtk_module_autoinit(TARGETS PostTopOptVtk PostTopOptPlyImport PostTopOptPlyExtract MODULES
+        VTK::CommonCore VTK::CommonDataModel VTK::FiltersCore VTK::IOPLY)
+endif()
