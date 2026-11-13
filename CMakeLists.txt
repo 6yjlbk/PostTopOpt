@@ -154,3 +154,19 @@ if(BUILD_TESTING)
     target_link_libraries(PostTopOptArchitectureTest PRIVATE PostTopOpt)
     add_test(NAME ArchitectureApiTest COMMAND PostTopOptArchitectureTest)
 endif()
+
+if(POSTTOPOPT_WITH_VTK)
+    add_executable(PostTopOptPlyDensity examples/ply_density.cpp)
+    target_link_libraries(PostTopOptPlyDensity PRIVATE PostTopOpt)
+    vtk_module_autoinit(TARGETS PostTopOptPlyDensity MODULES
+        VTK::CommonCore VTK::CommonDataModel VTK::FiltersCore VTK::IOPLY)
+endif()
+
+add_executable(PostTopOptBenchmark examples/benchmark.cpp)
+target_link_libraries(PostTopOptBenchmark PRIVATE PostTopOpt)
+
+if(BUILD_TESTING)
+    add_executable(PostTopOptOptimizationTest tests/optimization.cpp)
+    target_link_libraries(PostTopOptOptimizationTest PRIVATE PostTopOpt)
+    add_test(NAME OptimizationRegressionTest COMMAND PostTopOptOptimizationTest)
+endif()

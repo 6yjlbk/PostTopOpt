@@ -116,3 +116,7 @@ CGAL имеет отдельный решатель QEF и соглашение 
 ## Единый API и данные элементов
 
 Новый вход `PostTopOpt.h` поддерживает analytic Field и CellScalarVolume, с отдельными изменяемыми настройками backend. ParaView AMR включается через POSTTOPOPT_WITH_PARAVIEW и требует SDK ParaView. [Архитектура и ручная проверка](docs/architecture.md). Эта архитектурная итерация ещё не проверена сборкой и запуском.
+
+Сравнение PLY через плотности: цель `PostTopOptPlyDensity`, режим `--method all`, регулируемая ширина перехода, общий массив данных и CSV-отчёт. [Команды и результаты](docs/ply_density.md).
+
+Готовые поля плотностей и измерение DC/ParaView: `PostTopOptBenchmark`. [Банк заданий и методика](docs/benchmark.md).

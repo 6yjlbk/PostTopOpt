@@ -1,11 +1,15 @@
 #include "DualContouring.h"
 #include <Eigen/SVD>
+#include <chrono>
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
+#include <unordered_map>
 namespace geometry {
 namespace {
+using ProfileClock=std::chrono::steady_clock;
+double elapsedMs(ProfileClock::time_point t){return std::chrono::duration<double,std::milli>(ProfileClock::now()-t).count();}
 std::size_t product(const std::array<int,3>& n) {
     std::size_t result = 1;
     for (int v : n) {
@@ -16,7 +20,7 @@ std::size_t product(const std::array<int,3>& n) {
     return result;
 }
 // Solve relative to the intersection centroid to stabilize rank-deficient cells.
-Vec3 place(const std::vector<Vec3>& points, const std::vector<Vec3>& normals,
+Vec3 placeReference(const std::vector<Vec3>& points, const std::vector<Vec3>& normals,
            const Vec3& lo, const Vec3& hi, const ContourOptions& options, const Vec3* anchor = nullptr) {
     Vec3 center = Vec3::Zero();
     for (const auto& p : points) center += p;
@@ -52,14 +56,108 @@ Vec3 place(const std::vector<Vec3>& points, const std::vector<Vec3>& normals,
             for (std::size_t j=0; j<freeAxes.size(); ++j) offset[freeAxes[j]]=sol[j];
         }
         Vec3 candidate=center+offset;
+        if(state==0 && options.profile && options.constrainToCell &&
+            (!candidate.allFinite() || (candidate.array()<lo.array()).any() || (candidate.array()>hi.array()).any()))
+            ++options.profile->qefBoundaryCells;
         if (!candidate.allFinite()) continue;
         if (options.constrainToCell && ((candidate.array()<lo.array()-1e-12).any() ||
                                         (candidate.array()>hi.array()+1e-12).any())) continue;
+        // State 0 is the unconstrained minimum of this same convex objective.
+        // If it is feasible, no boundary subproblem can improve its value.
+        if(state==0 && (!options.constrainToCell ||
+            ((candidate.array()>=lo.array()).all() && (candidate.array()<=hi.array()).all())))
+        {
+            if(options.profile) ++options.profile->qefInteriorReturns;
+            return candidate;
+        }
+
         double error=(a*offset-b).squaredNorm();
         if (error<bestError) { bestError=error; best=candidate; }
     }
     if (!std::isfinite(bestError)) throw std::runtime_error("QEF failed");
     return options.constrainToCell ? best.cwiseMax(lo).cwiseMin(hi) : best;
+}
+Vec3 placeOptimized(const std::vector<Vec3>& points, const std::vector<Vec3>& normals,
+           const Vec3& lo, const Vec3& hi, const ContourOptions& options, const Vec3* anchor = nullptr) {
+    Vec3 center = Vec3::Zero();
+    for (const auto& p : points) center += p;
+    center /= static_cast<double>(points.size());
+    if (anchor) center = *anchor;
+    const auto count = static_cast<Eigen::Index>(points.size());
+    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,0,15,3> a(count+3,3);
+    Eigen::Matrix<double,Eigen::Dynamic,1,0,15,1> b(count+3);
+    for (Eigen::Index i=0; i<count; ++i) {
+        a.row(i) = normals[i].transpose();
+        b(i) = normals[i].dot(points[i]-center);
+    }
+    a.bottomRows(3) = std::sqrt(options.regularizationEnabled ? options.regularization : 0.0)*Eigen::Matrix3d::Identity();
+    b.tail(3).setZero();
+    Vec3 best = center;
+    double bestError = std::numeric_limits<double>::infinity();
+    std::array<double,27> lowerBounds; lowerBounds.fill(-std::numeric_limits<double>::infinity());
+    // Each axis is free, fixed at its lower bound, or fixed at its upper bound.
+    // Enumerating 27 active sets covers the interior, faces, edges and corners.
+    // Solve faces before their edges/corners so lower bounds can prune descendants.
+    static constexpr std::array<int,27> order{
+        0, 1,2,3,6,9,18,
+        4,5,7,8,10,11,19,20,12,15,21,24,
+        13,14,16,17,22,23,25,26};
+    for (int ordinal=0; ordinal<(options.constrainToCell ? 27 : 1); ++ordinal) {
+        const int state=order[ordinal];
+        // A face minimum is a lower bound for all its edges/corners.
+        bool pruned=false;
+        for(int d=0,power=1;d<3;++d,power*=3) {
+            const int mode=(state/power)%3;
+            if(mode && lowerBounds[mode*power]>=bestError) {pruned=true;break;}
+        }
+        if(pruned) continue;
+        int code=state;
+        std::array<int,3> freeAxes{}; int freeCount=0;
+        Vec3 offset=Vec3::Zero();
+        for (int d=0; d<3; ++d) {
+            int mode=code%3; code/=3;
+            if (mode==0) freeAxes[freeCount++]=d;
+            else offset[d]=(mode==1 ? lo[d] : hi[d])-center[d];
+        }
+        if (freeCount!=0) {
+            Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,0,15,3> reduced(a.rows(), freeCount);
+            for (std::size_t j=0; j<freeCount; ++j) reduced.col(j)=a.col(freeAxes[j]);
+            Eigen::Matrix<double,Eigen::Dynamic,1,0,15,1> rhs=b-a*offset;
+            Eigen::Matrix<double,Eigen::Dynamic,1,0,3,1> sol(freeCount);
+            if(freeCount==1) {
+                // One singular value: scaled scalar least-squares, no matrix factorization.
+                const double norm=reduced.col(0).stableNorm();
+                sol[0]=norm>0 ? (reduced.col(0)/norm).dot(rhs)/norm : 0.;
+            } else sol=reduced.jacobiSvd(Eigen::ComputeThinU|Eigen::ComputeThinV).solve(rhs);
+            for (std::size_t j=0; j<freeCount; ++j) offset[freeAxes[j]]=sol[j];
+        }
+        if(freeCount==2) lowerBounds[state]=(a*offset-b).squaredNorm();
+        Vec3 candidate=center+offset;
+        if(state==0 && options.profile && options.constrainToCell &&
+            (!candidate.allFinite() || (candidate.array()<lo.array()).any() || (candidate.array()>hi.array()).any()))
+            ++options.profile->qefBoundaryCells;
+        if (!candidate.allFinite()) continue;
+        if (options.constrainToCell && ((candidate.array()<lo.array()-1e-12).any() ||
+                                        (candidate.array()>hi.array()+1e-12).any())) continue;
+        // State 0 is the unconstrained minimum of this same convex objective.
+        // If it is feasible, no boundary subproblem can improve its value.
+        if(state==0 && (!options.constrainToCell ||
+            ((candidate.array()>=lo.array()).all() && (candidate.array()<=hi.array()).all())))
+        {
+            if(options.profile) ++options.profile->qefInteriorReturns;
+            return candidate;
+        }
+
+        double error=(a*offset-b).squaredNorm();
+        if (error<bestError) { bestError=error; best=candidate; }
+    }
+    if (!std::isfinite(bestError)) throw std::runtime_error("QEF failed");
+    return options.constrainToCell ? best.cwiseMax(lo).cwiseMin(hi) : best;
+}
+Vec3 place(const std::vector<Vec3>& points,const std::vector<Vec3>& normals,
+           const Vec3& lo,const Vec3& hi,const ContourOptions& options,const Vec3* anchor=nullptr) {
+    return options.optimizeQef ? placeOptimized(points,normals,lo,hi,options,anchor)
+                               : placeReference(points,normals,lo,hi,options,anchor);
 }
 }
 static Mesh dualContourImpl(const Grid& grid, const Field& field, const Gradient& gradient, //Общая внутренняя функция. Для обычного DC  bool cornerPlanes = false, для модифицированного DC bool cornerPlanes = true
@@ -69,6 +167,7 @@ static Mesh dualContourImpl(const Grid& grid, const Field& field, const Gradient
         !std::isfinite(options.regularization) || options.regularization<0 ||
         !std::isfinite(options.gradientStep) || options.gradientStep<=0)
         throw std::invalid_argument("Invalid field, grid or options");
+    if(options.profile) *options.profile={};
     validateGrid(grid);
     auto nodes=grid.cells;
     for (auto& n : nodes) {
@@ -82,13 +181,16 @@ static Mesh dualContourImpl(const Grid& grid, const Field& field, const Gradient
         return grid.origin+grid.spacing.cwiseProduct(Vec3(x,y,z));
     };
     const auto evaluate=[&](const Vec3& p) {
+        if(options.profile) ++options.profile->fieldQueries;
         double value=field(p)-options.isovalue;
         if (!std::isfinite(value)) throw std::invalid_argument("Non-finite field value");
         return value;
     };
+    const auto samplingStart=options.profile ? ProfileClock::now() : ProfileClock::time_point{};
     std::vector<double> values(product(nodes));
     for(int x=0;x<nodes[0];++x) for(int y=0;y<nodes[1];++y) for(int z=0;z<nodes[2];++z)
         values[index(x,y,z,nodes)]=evaluate(position(x,y,z));
+    if(options.profile) options.profile->samplingMs=elapsedMs(samplingStart);
     const auto value=[&](int x,int y,int z) { return values[index(x,y,z,nodes)]; };
     const auto derivative = [&](const Vec3& p) -> Vec3 {
         Vec3 n;
@@ -104,9 +206,23 @@ static Mesh dualContourImpl(const Grid& grid, const Field& field, const Gradient
     };
     const auto missing=std::numeric_limits<std::size_t>::max();
     std::vector<std::size_t> ids(product(grid.cells),missing);
+    struct HermiteSample { Vec3 point, normal; };
+    // Sparse per-direction keys avoid allocating storage for inactive grid edges.
+    std::array<std::unordered_map<std::size_t,HermiteSample>,3> hermiteCache;
+    std::vector<Vec3> points,normals; points.reserve(12); normals.reserve(12);
     Mesh mesh;
     for(int x=0;x<grid.cells[0];++x) for(int y=0;y<grid.cells[1];++y) for(int z=0;z<grid.cells[2];++z) {
-        std::vector<Vec3> points,normals;
+        const auto hermiteStart=options.profile ? ProfileClock::now() : ProfileClock::time_point{};
+        points.clear(); normals.clear();
+        // Uniform-sign cells have no intersected edge; avoid scanning all 12 edges.
+        const bool firstInside=value(x,y,z)<0;
+        bool mixed=false;
+        for(int dx=0;dx<2;++dx) for(int dy=0;dy<2;++dy) for(int dz=0;dz<2;++dz)
+            mixed |= (value(x+dx,y+dy,z+dz)<0)!=firstInside;
+        if(!mixed) {
+            if(options.profile) options.profile->hermiteMs+=elapsedMs(hermiteStart);
+            continue;
+        }
         Vec3 intersectionCenter=Vec3::Zero();
         int intersections=0;
         std::array<bool,8> usedCorners{};
@@ -116,6 +232,18 @@ static Mesh dualContourImpl(const Grid& grid, const Field& field, const Gradient
             auto end=start; ++end[axis];
             double f0=value(start[0],start[1],start[2]), f1=value(end[0],end[1],end[2]);
             if ((f0<0)==(f1<0)) continue;
+            if(options.profile) ++options.profile->edgeVisits;
+            const auto edgeKey=index(start[0],start[1],start[2],nodes);
+            if(!cornerPlanes && options.cacheHermite) {
+                const auto found=hermiteCache[axis].find(edgeKey);
+                if(found!=hermiteCache[axis].end()) {
+                    points.push_back(found->second.point); normals.push_back(found->second.normal);
+                    intersectionCenter+=found->second.point; ++intersections;
+                    if(options.profile) ++options.profile->hermiteCacheHits;
+                    continue;
+                }
+            }
+            if(options.profile) ++options.profile->hermiteEvaluations;
             Vec3 p=position(start[0],start[1],start[2]);
             if (options.bisection) {
                 Vec3 left=p, right=position(end[0],end[1],end[2]);
@@ -144,7 +272,9 @@ static Mesh dualContourImpl(const Grid& grid, const Field& field, const Gradient
             ++intersections;
             if (!cornerPlanes) {
                 const Vec3 n=derivative(p);
-                points.push_back(p); normals.push_back(n/n.stableNorm());
+                const Vec3 normal=n/n.stableNorm();
+                points.push_back(p); normals.push_back(normal);
+                if(options.cacheHermite) hermiteCache[axis].emplace(edgeKey,HermiteSample{p,normal});
             } else {
                 // Unique corners incident to sign-changing edges (not repeated per edge).
                 // Linearization: g(q).(x-q) + f(q)-iso = 0.
@@ -163,14 +293,19 @@ static Mesh dualContourImpl(const Grid& grid, const Field& field, const Gradient
                 }
             }
         }
+        if(options.profile) options.profile->hermiteMs+=elapsedMs(hermiteStart);
         if(points.empty()) continue;
+        if(options.profile) ++options.profile->activeCells;
         ids[index(x,y,z,grid.cells)]=mesh.vertices.size();
         Vec3 lo=position(x,y,z);
         intersectionCenter/=static_cast<double>(intersections);
         // Same anchor, solver and box constraints for both DC modes.
+        const auto qefStart=options.profile ? ProfileClock::now() : ProfileClock::time_point{};
         mesh.vertices.push_back(place(points,normals,lo,lo+grid.spacing,options,
                                       cornerPlanes ? &intersectionCenter : nullptr));
+        if(options.profile) options.profile->qefMs+=elapsedMs(qefStart);
     }
+    const auto connectivityStart=options.profile ? ProfileClock::now() : ProfileClock::time_point{};
     // Cyclic transverse axes give a +axis orientation. Reverse when outside is at the start.
     for(int axis=0;axis<3;++axis) {
         int u=(axis+1)%3,v=(axis+2)%3;
@@ -187,9 +322,11 @@ static Mesh dualContourImpl(const Grid& grid, const Field& field, const Gradient
                 if(q[c]==missing) throw std::runtime_error("Missing active cell");
             }
             if(a>=0) std::reverse(q.begin(),q.end());
+            if(options.profile) ++options.profile->uniqueEdges;
             mesh.quads.push_back(q);
         }
     }
+    if(options.profile) options.profile->connectivityMs=elapsedMs(connectivityStart);
     return mesh;
 }
 

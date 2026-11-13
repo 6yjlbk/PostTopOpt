@@ -1,0 +1,7 @@
+cache=0
+repeats=5
+threshold=0.5
+lambda=0.001
+regularization=1
+constrained=1
+bisection=1

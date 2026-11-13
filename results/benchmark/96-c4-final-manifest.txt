@@ -1,0 +1,6 @@
+generator=1
+cells=96
+complexity=4
+ramp_width=0.04
+origin=-1,-1,-1
+index=z-fastest

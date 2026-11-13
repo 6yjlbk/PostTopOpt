@@ -24,7 +24,7 @@ Field linearCellField(std::shared_ptr<const CellScalarVolume> volume) {
         for(int mask=0;mask<8;++mask) {
             int at[3]; double weight=1;
             for(int d=0;d<3;++d) { bool upper=(mask&(1<<d))!=0; at[d]=upper?hi[d]:lo[d]; weight*=upper?t[d]:1-t[d]; }
-            value+=weight*volume->values[cellIndex(g,at[0],at[1],at[2])];
+            value+=weight*volume->values[(static_cast<std::size_t>(at[0])*g.cells[1]+at[1])*g.cells[2]+at[2]];
         }
         return value;
     };

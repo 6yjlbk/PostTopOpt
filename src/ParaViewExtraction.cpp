@@ -1,5 +1,6 @@
 #include "ParaViewExtraction.h"
 #include <cmath>
+#include <chrono>
 #include <stdexcept>
 #include <mutex>
 #ifdef POSTTOPOPT_WITH_PARAVIEW
@@ -33,6 +34,9 @@ Mesh paraViewDualContour(const CellScalarVolume& volume,const ParaViewContourOpt
     (void)volume; (void)options;
     throw std::runtime_error("ParaView backend disabled; configure POSTTOPOPT_WITH_PARAVIEW=ON");
 #else
+    using Clock=std::chrono::steady_clock;
+    const auto begin=Clock::now();
+    if(options.profile) *options.profile={};
     volume.validate();
     for(int n:volume.grid.cells) if(n<3) throw std::invalid_argument("ParaView AMR requires at least 3 cells per axis");
     if(!std::isfinite(options.isovalue)) throw std::invalid_argument("Invalid ParaView isovalue");
@@ -87,7 +91,9 @@ Mesh paraViewDualContour(const CellScalarVolume& volume,const ParaViewContourOpt
     vtkNew<vtkDummyController> controller;
     contour->SetController(controller);
     contour->SetEnableMultiProcessCommunication(1); // Serial controller; helper requires a non-null communicator.
+    const auto filterStart=Clock::now();
     contour->Update();
+    const auto conversionStart=Clock::now();
     if(errors->failed) throw std::runtime_error("vtkAMRDualContour reported an error");
     auto* output=vtkMultiBlockDataSet::SafeDownCast(contour->GetOutputDataObject(0));
     if(!output) throw std::runtime_error("Unexpected ParaView output type");
@@ -116,11 +122,12 @@ Mesh paraViewDualContour(const CellScalarVolume& volume,const ParaViewContourOpt
             mesh.triangles.push_back({offset+static_cast<std::size_t>(ids[0]),offset+static_cast<std::size_t>(ids[1]),offset+static_cast<std::size_t>(ids[2])});
         }
     }
+    if(options.profile) {
+        options.profile->preparationMs=std::chrono::duration<double,std::milli>(filterStart-begin).count();
+        options.profile->filterMs=std::chrono::duration<double,std::milli>(conversionStart-filterStart).count();
+        options.profile->conversionMs=std::chrono::duration<double,std::milli>(Clock::now()-conversionStart).count();
+    }
     return mesh;
 #endif
 }
 }
-
-
-
-

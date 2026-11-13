@@ -13,12 +13,13 @@ Mesh extract(Backend backend,const Grid& grid,const Field& field,const Gradient&
     throw std::invalid_argument("Unknown backend");
 }
 Mesh extract(Backend backend,const CellScalarVolume& volume,double threshold,const ExtractionSettings& settings) {
-    volume.validate();
+
     if(backend==Backend::ParaViewAmr) {
         auto options=settings.paraview; options.isovalue=threshold;
         return paraViewDualContour(volume,options);
     }
-    auto field=densityField(std::make_shared<const CellScalarVolume>(volume),threshold);
+    // Synchronous extraction never retains Field: borrow the immutable input instead of copying it.
+    auto field=densityField(std::shared_ptr<const CellScalarVolume>(&volume,[](const CellScalarVolume*){}),threshold);
     auto options=settings;
     // densityField already incorporates the physical density threshold.
     options.dc.isovalue=0; options.cgal.isovalue=0; options.mcIsovalue=0;
