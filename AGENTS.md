@@ -2,32 +2,25 @@
 
 ## Project overview
 
-PostTopOpt is a C++20 project for studying, implementing, and testing geometry extraction and post-processing algorithms in the context of topology optimization and CAE software.
+PostTopOpt is a reusable C++20 static library for extracting surfaces from regular-grid scalar fields and element volume fractions (VF). Implemented backends: own DC, emilk-inspired DC, classic MC, optional CGAL DC and ParaView AMR. Smoothing, remeshing and a topology optimizer are not implemented.
 
-Implemented: regular-grid DC, emilk-inspired corner-plane DC, and classic Marching Cubes. Smoothing and remeshing remain future work.
+Build: CMake, Eigen; optional VTK/ParaView/CGAL. Keep GCC/MinGW and MSVC compatibility. Local release/debug presets use MSYS2 UCRT64.
 
-The project is a reusable C++ static library with separate example executables.
+## Structure and documentation
 
-## Technology stack
+- include/src: public API and library implementations.
+- apps/main.cpp: PostTopOptRun, shared input preparation, benchmark and export.
+- apps/AnalyticModels.cpp: the primary analytic model bank in one file.
+- apps/VolumeIO.cpp: VF CSV and legacy PTOV1 I/O.
+- apps/legacy: retained direct analytic examples and specialized programs.
+- data/models and data/volumes: PLY and saved VF arrays.
+- results: one directory per run; generated outputs are ignored by Git.
+- build/release and build/debug: active presets; build/legacy: moved caches, do not use.
+- tests, docs, third_party: checks, documentation, attribution and licenses.
 
-- Language: C++20 (required by the current build and examples)
-- Build system: CMake
-- Linear algebra: Eigen
-- Testing: CTest
-- Platforms: Windows with GCC/MinGW and MSVC
-- IDEs: Visual Studio Code and Visual Studio 2022/Visual Studio 2019
-- Version control: Git
+Read docs/architecture.md for data contracts, DC/QEF and backend differences; docs/running.md for current CLI and metric meanings; docs/benchmark.md for measured results and proposed work; docs/implementations.md for the dated external implementation review. Keep measured facts separate from proposals. Do not restore results deleted by the user.
 
-## Project structure
-
-- `include/` — public C++ headers
-- `src/` — library implementations
-- `tests/` — numerical and integration tests
-- `docs/` — algorithm explanations, mathematical notes, and architectural decisions
-
-- examples/ — analytic fields and method-selection CLI
-- results/ — exported OBJ geometry, tracked separately from build artifacts
-- third_party/ — MC table attribution and license
+Both own DC variants share a QEF solver; emilk changes planes. Defaults: regularization=0.001, regularizationEnabled=true, constrainToCell=true, bisection=true; all remain configurable. CGAL has a separate solver; do not map our regularization to it. MC uses no QEF. ParaView receives native element VF through its adapter. Benchmark is on by default; false means one extraction per method and no summary/runs CSV. Report times are seconds with three decimal places.
 
 ## Development rules
 
@@ -68,25 +61,7 @@ Do not assume that a basic Dual Contouring implementation always produces manifo
 - When a mathematical assumption is uncertain, state it explicitly.
 - Keep project documentation consistent with implemented behavior.
 
-Read `docs/decisions.md` and `docs/algorithm.md` when they are relevant and available.
-## Current implementation and documentation
 
-Read docs/mathematics.md for QEF modes, docs/method_comparison.md for measurements
-and defects, and docs/experiment_plan.md for proposals that are not yet implemented.
-Both DC variants share SVD and four combinations of regularization/cell constraints.
-Defaults: regularization=0.001, regularizationEnabled=true, constrainToCell=true, bisection=true. The emilk-inspired variant
-changes planes, not the solver. MC uses no QEF. Constrained QEF and MC already exist.
-Separate visual observations from measurements and proposals from accepted dependencies.
-Preserve attribution and license notices. Examples default to project-root results/;
-build caches remain excluded from Git.
+## Workflow constraints
 
-
-## Дополнение: CGAL, 10 ноября 2026
-
-Добавлен необязательный метод cgal-dc. Собственные DC, emilk и MC сохранены.
-CGAL имеет отдельный решатель QEF и соглашение о нуле; описание общего
-решателя собственных DC к нему не относится. [Сборка, различия и проверки](docs/cgal.md).
-
-## Структура после объединения CLI, 13 ноября 2026
-
-Основная программа — apps/main.cpp (PostTopOptRun); аналитический банк — apps/AnalyticModels.cpp; CSV/PTOV ввод — apps/VolumeIO.cpp. Прежние программы сохранены в apps/legacy. PLY находятся в data/models, массивы — data/volumes, результаты — в отдельном подкаталоге results. Presets создают build/release и build/debug. build/legacy — архив, его кэши после переноса не использовать. Актуальные команды: docs/running.md. Генерируемые результаты не добавлять в Git автоматически. Не восстанавливать удалённые пользователем результаты. Сборки и тесты после реорганизации выполняет пользователь.
+Do not run builds, applications or tests until the user authorizes them again. Read-only inspection and documentation editing are allowed. Preserve source model files and third-party attribution. Do not commit or push without an explicit request.
