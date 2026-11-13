@@ -29,7 +29,7 @@ Vec3 place(const std::vector<Vec3>& points, const std::vector<Vec3>& normals,
         a.row(i) = normals[i].transpose();
         b(i) = normals[i].dot(points[i]-center);
     }
-    a.bottomRows(3) = std::sqrt(options.regularization)*Eigen::Matrix3d::Identity();
+    a.bottomRows(3) = std::sqrt(options.regularizationEnabled ? options.regularization : 0.0)*Eigen::Matrix3d::Identity();
     b.tail(3).setZero();
     Vec3 best = center;
     double bestError = std::numeric_limits<double>::infinity();
@@ -69,7 +69,7 @@ static Mesh dualContourImpl(const Grid& grid, const Field& field, const Gradient
         !std::isfinite(options.regularization) || options.regularization<0 ||
         !std::isfinite(options.gradientStep) || options.gradientStep<=0)
         throw std::invalid_argument("Invalid field, grid or options");
-    product(grid.cells);
+    validateGrid(grid);
     auto nodes=grid.cells;
     for (auto& n : nodes) {
         if (n==std::numeric_limits<int>::max()) throw std::invalid_argument("Grid too large");

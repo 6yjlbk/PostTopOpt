@@ -112,3 +112,7 @@ CGAL имеет отдельный решатель QEF и соглашение 
 ## Импорт PLY (необязательная VTK)
 
 Добавлен отдельный модуль и программа `PostTopOptPlyImport` для чтения Stanford PLY и диагностики сетки. Включение: `POSTTOPOPT_WITH_VTK=ON`. Код ещё не проверен сборкой и запуском. [Настройка VTK, команды и ограничения](docs/ply_import.md).
+
+## Единый API и данные элементов
+
+Новый вход `PostTopOpt.h` поддерживает analytic Field и CellScalarVolume, с отдельными изменяемыми настройками backend. ParaView AMR включается через POSTTOPOPT_WITH_PARAVIEW и требует SDK ParaView. [Архитектура и ручная проверка](docs/architecture.md). Эта архитектурная итерация ещё не проверена сборкой и запуском.

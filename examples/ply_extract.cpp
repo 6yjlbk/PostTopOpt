@@ -1,5 +1,5 @@
 #include "PlyDistanceField.h"
-#include "SurfaceExtraction.h"
+#include "PostTopOpt.h"
 #include "ObjWriter.h"
 #include <chrono>
 #include <iostream>

@@ -26,7 +26,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_library(PostTopOpt STATIC src/DualContouring.cpp src/MarchingCubes.cpp src/ObjWriter.cpp src/CgalExtraction.cpp)
+add_library(PostTopOpt STATIC src/PostTopOpt.cpp src/Field.cpp src/CellScalarVolume.cpp src/ParaViewExtraction.cpp src/DualContouring.cpp src/MarchingCubes.cpp src/ObjWriter.cpp src/CgalExtraction.cpp)
 target_include_directories(PostTopOpt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(PostTopOpt PUBLIC Eigen3::Eigen)
 add_executable(PostTopOptDemo examples/sphere.cpp)
@@ -109,13 +109,29 @@ foreach(mode IN ITEMS Numeric Analytic)
 endforeach()
 target_compile_definitions(PostTopOptConeAnalytic PRIVATE POSTTOPOPT_CONE_ANALYTIC=1)
 
+# One library, optional ParaView implementation isolated in its .cpp adapter.
+option(POSTTOPOPT_WITH_PARAVIEW "Enable ParaView AMR dual contour backend" OFF)
+if(POSTTOPOPT_WITH_PARAVIEW)
+    find_package(ParaView REQUIRED COMPONENTS VTKExtensionsAMR)
+    if(NOT TARGET ParaView::VTKExtensionsAMR)
+        message(FATAL_ERROR "ParaView SDK must export ParaView::VTKExtensionsAMR")
+    endif()
+    target_compile_definitions(PostTopOpt PRIVATE POSTTOPOPT_WITH_PARAVIEW=1)
+    target_link_libraries(PostTopOpt PRIVATE ParaView::VTKExtensionsAMR)
+endif()
+
 # Optional PLY import; VTK remains separate from the extraction core.
 option(POSTTOPOPT_WITH_VTK "Enable VTK-based PLY import and diagnostics" OFF)
 if(POSTTOPOPT_WITH_VTK)
     find_package(nlohmann_json CONFIG REQUIRED)
-    find_package(VTK 9.0 REQUIRED COMPONENTS CommonCore CommonDataModel FiltersCore IOPLY)
-    add_library(PostTopOptVtk STATIC src/PlyImporter.cpp src/PlyDistanceField.cpp)
-    target_link_libraries(PostTopOptVtk PUBLIC PostTopOpt PRIVATE
+    if(NOT POSTTOPOPT_WITH_PARAVIEW)
+        find_package(VTK 9.0 REQUIRED COMPONENTS CommonCore CommonDataModel FiltersCore IOPLY)
+    elseif(NOT TARGET VTK::IOPLY)
+        message(FATAL_ERROR "Use a ParaView SDK exporting VTK::IOPLY; do not mix it with standalone VTK")
+    endif()
+    target_sources(PostTopOpt PRIVATE src/PlyImporter.cpp src/PlyDistanceField.cpp)
+    add_library(PostTopOptVtk ALIAS PostTopOpt)
+    target_link_libraries(PostTopOpt PRIVATE
         VTK::CommonCore VTK::CommonDataModel VTK::FiltersCore VTK::IOPLY)
     add_executable(PostTopOptPlyImport examples/ply_import.cpp)
     target_link_libraries(PostTopOptPlyImport PRIVATE PostTopOptVtk)
@@ -125,6 +141,16 @@ if(POSTTOPOPT_WITH_VTK)
     target_link_libraries(PostTopOptPlyExtract PRIVATE PostTopOptVtk)
     target_compile_definitions(PostTopOptPlyExtract PRIVATE
         POSTTOPOPT_RESULTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/results")
-    vtk_module_autoinit(TARGETS PostTopOptVtk PostTopOptPlyImport PostTopOptPlyExtract MODULES
+    vtk_module_autoinit(TARGETS PostTopOpt PostTopOptPlyImport PostTopOptPlyExtract MODULES
         VTK::CommonCore VTK::CommonDataModel VTK::FiltersCore VTK::IOPLY)
+endif()
+
+
+
+add_executable(PostTopOptCellDensity examples/cell_density.cpp)
+target_link_libraries(PostTopOptCellDensity PRIVATE PostTopOpt)
+if(BUILD_TESTING)
+    add_executable(PostTopOptArchitectureTest tests/architecture.cpp)
+    target_link_libraries(PostTopOptArchitectureTest PRIVATE PostTopOpt)
+    add_test(NAME ArchitectureApiTest COMMAND PostTopOptArchitectureTest)
 endif()

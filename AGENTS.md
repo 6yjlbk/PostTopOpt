@@ -74,7 +74,7 @@ Read `docs/decisions.md` and `docs/algorithm.md` when they are relevant and avai
 Read docs/mathematics.md for QEF modes, docs/method_comparison.md for measurements
 and defects, and docs/experiment_plan.md for proposals that are not yet implemented.
 Both DC variants share SVD and four combinations of regularization/cell constraints.
-Defaults: regularization=1e-6, constrainToCell=true. The emilk-inspired variant
+Defaults: regularization=0.001, regularizationEnabled=true, constrainToCell=true, bisection=true. The emilk-inspired variant
 changes planes, not the solver. MC uses no QEF. Constrained QEF and MC already exist.
 Separate visual observations from measurements and proposals from accepted dependencies.
 Preserve attribution and license notices. Examples default to project-root results/;

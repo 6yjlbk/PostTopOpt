@@ -77,6 +77,7 @@ int main() {
         // Different data, same solver: an exact expected endpoint-plane result.
         Grid q; q.origin=Vec3(0.2,0,0); q.spacing=Vec3(0.6,1,1); q.cells={1,1,1};
         ContourOptions options; options.isovalue=0.25; options.regularization=0;
+        options.bisection=false; // This test asserts the linear edge-interpolation result.
         const auto f=[](const Vec3& p){return p.x()*p.x();};
         const auto grad=[](const Vec3& p)->Vec3 {return Vec3(2*p.x(),0,0);};
         const auto dc=dualContour(q,f,grad,options);
@@ -121,4 +122,3 @@ int main() {
         std::cout<<"256 MC cases, winding/sharing, exact-isovalue plane, corner QEF, scaling, validation and OBJ passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }
-

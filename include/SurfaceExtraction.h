@@ -21,12 +21,13 @@ inline Mesh extractSurface(ExtractionMethod method, const Grid& grid, const Fiel
     case ExtractionMethod::CgalDualContouring:
         // CGAL has its own vertex solver; ContourOptions::regularization is not used.
         return cgalDualContour(grid, field, gradient,
-            {options.isovalue, options.constrainToCell, options.gradientStep});
+            {options.isovalue, options.constrainToCell, options.gradientStep, options.bisection});
     case ExtractionMethod::CgalOctreeDualContouring: {
         CgalContourOptions cgalOptions;
         cgalOptions.isovalue=options.isovalue;
         cgalOptions.constrainToCell=options.constrainToCell;
         cgalOptions.gradientStep=options.gradientStep;
+        cgalOptions.bisection=options.bisection;
         cgalOptions.octree=true;
         return cgalDualContour(grid,field,gradient,cgalOptions);
     }

@@ -1,26 +1,14 @@
 #pragma once
-#include "Mesh.h"
-#include <functional>
+#include "Field.h"
 namespace geometry {
-struct Grid { // Настройки Grid по умолчанию.
-    Vec3 origin = Vec3(-3, -3, -3); // Начало СК, из которой строится AABB
-    Vec3 spacing = Vec3::Constant(0.1); // Шаг сетки
-    std::array<int, 3> cells{80, 80, 80}; //Кол-во элементов по каждой из осей
-};
 struct ContourOptions {
-    double isovalue = 0; // Уровень поля, поверхность которого извлекается f(x) = isovalue; далее f(x) вычитается из значений поля в каждой ячейки
-    // double regularization = 1e-6; // Штраф при размещении вершины вдали от ее среднеого положения
-    // bool constrainToCell = true; // Требование оставить вершину внутри своей ячейки
-    double gradientStep = 1e-5; // 	Шаг численного вычисления градиента, если он не передан
-    double regularization = 0.001; // Штраф при размещении вершины вдали от ее среднеого положения
-    bool constrainToCell = true; // Требование оставить вершину внутри своей ячейки
-    bool bisection = true; // true — биссекция, false — линейная интерполяция (dc/emilk)
+    double isovalue = 0;
+    double regularization = 0.001;
+    bool constrainToCell = true;
+    double gradientStep = 1e-5;
+    bool bisection = true;
+    bool regularizationEnabled = true;
 };
-using Field = std::function<double(const Vec3&)>; // Функция скалярного поля
-using Gradient = std::function<Vec3(const Vec3&)>; // Функция градиента
-// Negative values relative to isovalue denote the interior. Boundaries are not capped.
-Mesh dualContour(const Grid&, const Field&, const Gradient& = {}, const ContourOptions& = {}); // Стандартный алгоритм DC. На выходе получаем сетку типа mesh 
-// Emilk-inspired corner-plane variant. Gradient must be the actual derivative,
-// not just a unit normal, for fields that are not signed distance functions.
-Mesh dualContourEmilk(const Grid&, const Field&, const Gradient& = {}, const ContourOptions& = {}); // Модифицированный алгоритм DC с вычислением двух Hermite points. На выходе получаем сетку типа mesh 
+Mesh dualContour(const Grid&, const Field&, const Gradient& = {}, const ContourOptions& = {});
+Mesh dualContourEmilk(const Grid&, const Field&, const Gradient& = {}, const ContourOptions& = {});
 }

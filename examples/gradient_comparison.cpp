@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
             };
         }
         geometry::CgalContourOptions options;
-        options.bisection=false; // Биссекция in both comparisons.
+        options.bisection=true; // Bisection in both comparisons.
         options.isovalue=0;
         options.constrainToCell=false;
         options.gradientStep=1e-5;
