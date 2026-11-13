@@ -29,7 +29,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(PostTopOpt STATIC src/PostTopOpt.cpp src/Field.cpp src/CellScalarVolume.cpp src/ParaViewExtraction.cpp src/DualContouring.cpp src/MarchingCubes.cpp src/ObjWriter.cpp src/CgalExtraction.cpp)
 target_include_directories(PostTopOpt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(PostTopOpt PUBLIC Eigen3::Eigen)
-add_executable(PostTopOptDemo examples/sphere.cpp)
+add_executable(PostTopOptDemo apps/legacy/sphere.cpp)
 target_link_libraries(PostTopOptDemo PRIVATE PostTopOpt)
 target_compile_definitions(PostTopOptDemo PRIVATE
     POSTTOPOPT_RESULTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/results")
@@ -51,13 +51,13 @@ foreach(example IN ITEMS Torus SphereUnion DrilledBox Gyroid)
     else()
         set(example_source gyroid)
     endif()
-    add_executable(PostTopOpt${example} examples/${example_source}.cpp)
+    add_executable(PostTopOpt${example} apps/legacy/${example_source}.cpp)
     target_link_libraries(PostTopOpt${example} PRIVATE PostTopOpt)
 target_compile_definitions(PostTopOpt${example} PRIVATE
     POSTTOPOPT_RESULTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/results")
     if(BUILD_TESTING)
         add_test(NAME Example${example}
-                 COMMAND PostTopOpt${example} "${CMAKE_CURRENT_SOURCE_DIR}/results/${example_source}.obj")
+                 COMMAND PostTopOpt${example} "${CMAKE_CURRENT_BINARY_DIR}/test-results/${example_source}.obj")
     endif()
 endforeach()
 
@@ -68,7 +68,7 @@ if(BUILD_TESTING)
     foreach(shape IN ITEMS SphereUnion DrilledBox Gyroid)
         foreach(method IN ITEMS dc emilk mc)
             add_test(NAME Compare${shape}_${method}
-                COMMAND PostTopOpt${shape} "${CMAKE_CURRENT_SOURCE_DIR}/results/${shape}_${method}.obj" --method ${method})
+                COMMAND PostTopOpt${shape} "${CMAKE_CURRENT_BINARY_DIR}/test-results/${shape}_${method}.obj" --method ${method})
         endforeach()
     endforeach()
     add_test(NAME InvalidMethodCLI COMMAND PostTopOptSphereUnion --method invalid)
@@ -89,20 +89,20 @@ if(BUILD_TESTING)
     if(POSTTOPOPT_WITH_CGAL)
         foreach(shape IN ITEMS SphereUnion DrilledBox Gyroid)
             add_test(NAME CompareCGAL_${shape}
-                COMMAND PostTopOpt${shape} "${CMAKE_CURRENT_SOURCE_DIR}/results/${shape}_cgal-dc.obj" --method cgal-dc)
+                COMMAND PostTopOpt${shape} "${CMAKE_CURRENT_BINARY_DIR}/test-results/${shape}_cgal-dc.obj" --method cgal-dc)
         endforeach()
     endif()
 endif()
 
 # Manual four-run gradient experiment; intentionally not registered with CTest.
-add_executable(PostTopOptGradientComparison examples/gradient_comparison.cpp)
+add_executable(PostTopOptGradientComparison apps/legacy/gradient_comparison.cpp)
 target_link_libraries(PostTopOptGradientComparison PRIVATE PostTopOpt)
 target_compile_definitions(PostTopOptGradientComparison PRIVATE
     POSTTOPOPT_RESULTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/results")
 
 # Cone examples share the standard CLI; select emilk with --method emilk.
 foreach(mode IN ITEMS Numeric Analytic)
-    add_executable(PostTopOptCone${mode} examples/cone.cpp)
+    add_executable(PostTopOptCone${mode} apps/legacy/cone.cpp)
     target_link_libraries(PostTopOptCone${mode} PRIVATE PostTopOpt)
     target_compile_definitions(PostTopOptCone${mode} PRIVATE
         POSTTOPOPT_RESULTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/results")
@@ -133,11 +133,11 @@ if(POSTTOPOPT_WITH_VTK)
     add_library(PostTopOptVtk ALIAS PostTopOpt)
     target_link_libraries(PostTopOpt PRIVATE
         VTK::CommonCore VTK::CommonDataModel VTK::FiltersCore VTK::IOPLY)
-    add_executable(PostTopOptPlyImport examples/ply_import.cpp)
+    add_executable(PostTopOptPlyImport apps/legacy/ply_import.cpp)
     target_link_libraries(PostTopOptPlyImport PRIVATE PostTopOptVtk)
     target_compile_definitions(PostTopOptPlyImport PRIVATE
-        POSTTOPOPT_EXAMPLES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/examples")
-    add_executable(PostTopOptPlyExtract examples/ply_extract.cpp)
+        POSTTOPOPT_EXAMPLES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/models")
+    add_executable(PostTopOptPlyExtract apps/legacy/ply_extract.cpp)
     target_link_libraries(PostTopOptPlyExtract PRIVATE PostTopOptVtk)
     target_compile_definitions(PostTopOptPlyExtract PRIVATE
         POSTTOPOPT_RESULTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/results")
@@ -147,7 +147,7 @@ endif()
 
 
 
-add_executable(PostTopOptCellDensity examples/cell_density.cpp)
+add_executable(PostTopOptCellDensity apps/legacy/cell_density.cpp)
 target_link_libraries(PostTopOptCellDensity PRIVATE PostTopOpt)
 if(BUILD_TESTING)
     add_executable(PostTopOptArchitectureTest tests/architecture.cpp)
@@ -156,17 +156,33 @@ if(BUILD_TESTING)
 endif()
 
 if(POSTTOPOPT_WITH_VTK)
-    add_executable(PostTopOptPlyDensity examples/ply_density.cpp)
+    add_executable(PostTopOptPlyDensity apps/legacy/ply_density.cpp)
     target_link_libraries(PostTopOptPlyDensity PRIVATE PostTopOpt)
     vtk_module_autoinit(TARGETS PostTopOptPlyDensity MODULES
         VTK::CommonCore VTK::CommonDataModel VTK::FiltersCore VTK::IOPLY)
 endif()
 
-add_executable(PostTopOptBenchmark examples/benchmark.cpp)
+add_executable(PostTopOptBenchmark apps/legacy/benchmark.cpp apps/AnalyticModels.cpp)
 target_link_libraries(PostTopOptBenchmark PRIVATE PostTopOpt)
 
 if(BUILD_TESTING)
     add_executable(PostTopOptOptimizationTest tests/optimization.cpp)
     target_link_libraries(PostTopOptOptimizationTest PRIVATE PostTopOpt)
     add_test(NAME OptimizationRegressionTest COMMAND PostTopOptOptimizationTest)
+endif()
+
+# Unified application: all input sources share preparation and measurement stages.
+add_executable(PostTopOptRun apps/main.cpp apps/AnalyticModels.cpp apps/VolumeIO.cpp)
+target_link_libraries(PostTopOptRun PRIVATE PostTopOpt)
+if(POSTTOPOPT_WITH_VTK)
+    target_compile_definitions(PostTopOptRun PRIVATE POSTTOPOPT_APP_WITH_VTK=1)
+    vtk_module_autoinit(TARGETS PostTopOptRun MODULES
+        VTK::CommonCore VTK::CommonDataModel VTK::FiltersCore VTK::IOPLY)
+endif()
+
+if(BUILD_TESTING)
+    add_executable(PostTopOptApplicationTest tests/application.cpp apps/AnalyticModels.cpp apps/VolumeIO.cpp)
+    target_include_directories(PostTopOptApplicationTest PRIVATE apps)
+    target_link_libraries(PostTopOptApplicationTest PRIVATE PostTopOpt)
+    add_test(NAME ApplicationDataTest COMMAND PostTopOptApplicationTest "${CMAKE_CURRENT_BINARY_DIR}/test-data")
 endif()

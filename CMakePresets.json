@@ -1,0 +1,58 @@
+{
+  "version": 2,
+  "configurePresets": [
+    {
+      "name": "release",
+      "displayName": "Release, all backends (local MSYS2)",
+      "generator": "MinGW Makefiles",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "C:/msys64/ucrt64/bin/c++.exe",
+        "CMAKE_MAKE_PROGRAM": "C:/msys64/ucrt64/bin/mingw32-make.exe",
+        "CMAKE_PREFIX_PATH": "C:/msys64/ucrt64",
+        "ParaView_DIR": "C:/msys64/ucrt64/lib/cmake/paraview",
+        "POSTTOPOPT_WITH_PARAVIEW": "ON",
+        "POSTTOPOPT_WITH_VTK": "ON",
+        "POSTTOPOPT_WITH_CGAL": "ON",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "release",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "jobs": 4
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "jobs": 4
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

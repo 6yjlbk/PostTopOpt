@@ -13,8 +13,8 @@
 
 namespace geometry {
 PlyDistanceField makePlyDistanceField(const std::filesystem::path& path, int resolution, int padding) {
-    if (resolution<4 || resolution>512 || padding<2 || padding>32)
-        throw std::invalid_argument("Resolution must be 4..512; padding must be 2..32 cells");
+    if (resolution<4 || resolution>500 || padding<2 || padding>32)
+        throw std::invalid_argument("Resolution must be 4..500; padding must be 2..32 cells");
     const auto imported=readPly(path);
     if (!imported.report.closedByEdgeIncidence())
         throw std::invalid_argument("Signed-distance extraction requires a closed input without non-manifold edges; use PLY import diagnostics first");
