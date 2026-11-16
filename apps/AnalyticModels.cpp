@@ -26,7 +26,8 @@ CellScalarVolume generateAnalytic(const std::string& name,int n,int complexity){
         else if(name=="torus") margin=.18-std::hypot(std::hypot(p.x(),p.y())-.48,p.z());
         else if(name=="sphere-union") margin=std::max(.45-(p-Vec3(-.25,0,0)).norm(),.45-(p-Vec3(.25,0,0)).norm());
         else if(name=="drilled-box") margin=std::min(.65-p.cwiseAbs().maxCoeff(),std::min({std::hypot(p.x(),p.y()),std::hypot(p.y(),p.z()),std::hypot(p.z(),p.x())})-.22);
-        else if(name=="cone") margin=std::min({.5-std::hypot(p.x(),p.y())-.5*p.z(),p.z()+.5,.5-p.z()});
+        // Cone: base z=-0.5, radius=0.5; apex z=0.5 (height=1).
+        else if(name=="cone") margin=std::min({.25-std::hypot(p.x(),p.y())-.5*p.z(),p.z()+.5,.5-p.z()});
         else throw std::invalid_argument("Unknown analytic model: "+name);
         return std::clamp(.5+std::min(margin,envelope)/.04,0.,1.);
     });
