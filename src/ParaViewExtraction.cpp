@@ -16,12 +16,95 @@
 #include <vtkNew.h>
 #include <vtkNonOverlappingAMR.h>
 #include <vtkPolyData.h>
+#include <vtkQuadricDecimation.h>
 #include <vtkSmartPointer.h>
 #include <vtkTriangleFilter.h>
 #include <vtkUniformGrid.h>
 #include <vtkVersionMacros.h>
+#include <vtkWindowedSincPolyDataFilter.h>
 #endif
 namespace geometry {
+#ifdef POSTTOPOPT_WITH_PARAVIEW
+namespace {
+// Manual, compile-time postprocessing settings. Rebuild after changing them.
+// Both false retain the original triangulation-only path. ParaView backend only.
+constexpr bool EnableSmoothing = false; //Сглаживаение вкл/выкл
+constexpr bool EnableDecimation = false; //Облегчение модели за счет уменьшения числа граней вкл/выкл
+constexpr int SmoothingIterations = 20;
+constexpr double SmoothingPassBand = 0.1; // Smaller means stronger smoothing (0,2].
+constexpr bool SmoothingBoundary = false; // Keep open-boundary vertices fixed.
+constexpr bool SmoothingFeatureEdges = true; // Classify sharp edges and constrain motion.
+constexpr double SmoothingFeatureAngle = 45.0; // Degrees.
+constexpr double SmoothingEdgeAngle = 15.0; // Degrees.
+constexpr bool SmoothingNormalizeCoordinates = true;
+constexpr bool SmoothingNonManifold = false;
+constexpr double DecimationTargetReduction = 0.5; // Fraction to REMOVE, not retain.
+constexpr bool DecimationVolumePreservation = true; // Not an exact volume guarantee.
+constexpr bool DecimationAttributeErrorMetric = false;
+
+static_assert(SmoothingIterations >= 2, "Use at least two smoothing iterations");
+static_assert(SmoothingPassBand > 0.0 && SmoothingPassBand <= 2.0, "Invalid passband");
+static_assert(SmoothingFeatureAngle >= 0.0 && SmoothingFeatureAngle <= 180.0,
+              "Invalid feature angle");
+static_assert(SmoothingEdgeAngle >= 0.0 && SmoothingEdgeAngle <= 180.0,
+              "Invalid edge angle");
+static_assert(DecimationTargetReduction >= 0.0 && DecimationTargetReduction < 1.0,
+              "Reduction must be in [0,1)");
+
+class Errors final:public vtkCommand {
+public:
+    static Errors* New(){return new Errors;}
+    bool failed=false;
+    void Execute(vtkObject*,unsigned long,void*) override {failed=true;}
+};
+
+// Retain each output with a smart pointer after its producing filter is destroyed.
+// SetInputData does not modify the original contour output in place.
+vtkSmartPointer<vtkPolyData> postprocessPolyData(vtkPolyData* input, Errors* errors) {
+    vtkSmartPointer<vtkPolyData> data = input;
+    if constexpr(EnableSmoothing) {
+        if(data->GetNumberOfPoints() > 0 && data->GetNumberOfCells() > 0) {
+            vtkNew<vtkWindowedSincPolyDataFilter> smoothing;
+            smoothing->AddObserver(vtkCommand::ErrorEvent,errors);
+            smoothing->SetInputData(data);
+            smoothing->SetNumberOfIterations(SmoothingIterations);
+            smoothing->SetPassBand(SmoothingPassBand);
+            smoothing->SetBoundarySmoothing(SmoothingBoundary);
+            smoothing->SetFeatureEdgeSmoothing(SmoothingFeatureEdges);
+            smoothing->SetFeatureAngle(SmoothingFeatureAngle);
+            smoothing->SetEdgeAngle(SmoothingEdgeAngle);
+            smoothing->SetNormalizeCoordinates(SmoothingNormalizeCoordinates);
+            smoothing->SetNonManifoldSmoothing(SmoothingNonManifold);
+            smoothing->GenerateErrorScalarsOff();
+            smoothing->GenerateErrorVectorsOff();
+            smoothing->Update();
+            if(errors->failed) throw std::runtime_error("ParaView output smoothing failed");
+            data = smoothing->GetOutput();
+        }
+    }
+    vtkNew<vtkTriangleFilter> triangles;
+    triangles->AddObserver(vtkCommand::ErrorEvent,errors);
+    triangles->SetInputData(data);
+    triangles->PassLinesOff(); triangles->PassVertsOff(); triangles->Update();
+    if(errors->failed) throw std::runtime_error("ParaView output triangulation failed");
+    data = triangles->GetOutput();
+    if constexpr(EnableDecimation) {
+        if(data->GetNumberOfPolys() > 0 && DecimationTargetReduction > 0.0) {
+            vtkNew<vtkQuadricDecimation> decimation;
+            decimation->AddObserver(vtkCommand::ErrorEvent,errors);
+            decimation->SetInputData(data);
+            decimation->SetTargetReduction(DecimationTargetReduction);
+            decimation->SetVolumePreservation(DecimationVolumePreservation);
+            decimation->SetAttributeErrorMetric(DecimationAttributeErrorMetric);
+            decimation->Update();
+            if(errors->failed) throw std::runtime_error("ParaView output decimation failed");
+            data = decimation->GetOutput();
+        }
+    }
+    return data;
+}
+} // namespace
+#endif
 bool paraViewAvailable() noexcept {
 #ifdef POSTTOPOPT_WITH_PARAVIEW
     return true;
@@ -74,12 +157,7 @@ Mesh paraViewDualContour(const CellScalarVolume& volume,const ParaViewContourOpt
     int blocks[1]={1}; amr->Initialize(1,blocks);
 #endif
     amr->SetDataSet(0,0,block);
-    class Errors final:public vtkCommand {
-    public:
-        static Errors* New(){return new Errors;}
-        bool failed=false;
-        void Execute(vtkObject*,unsigned long,void*) override {failed=true;}
-    };
+
     vtkNew<Errors> errors;
     vtkNew<vtkAMRDualContour> contour;
     contour->AddObserver(vtkCommand::ErrorEvent,errors);
@@ -103,11 +181,7 @@ Mesh paraViewDualContour(const CellScalarVolume& volume,const ParaViewContourOpt
     for(iterator->InitTraversal();!iterator->IsDoneWithTraversal();iterator->GoToNextItem()) {
         auto* poly=vtkPolyData::SafeDownCast(iterator->GetCurrentDataObject());
         if(!poly) continue;
-        vtkNew<vtkTriangleFilter> triangles;
-        triangles->AddObserver(vtkCommand::ErrorEvent,errors);
-        triangles->SetInputData(poly); triangles->PassLinesOff(); triangles->PassVertsOff(); triangles->Update();
-        if(errors->failed) throw std::runtime_error("ParaView output triangulation failed");
-        auto* data=triangles->GetOutput();
+        auto data=postprocessPolyData(poly,errors);
         auto offset=mesh.vertices.size();
         for(vtkIdType i=0;i<data->GetNumberOfPoints();++i) {
             double p[3]; data->GetPoint(i,p); Vec3 v(p[0],p[1],p[2]);
@@ -125,9 +199,11 @@ Mesh paraViewDualContour(const CellScalarVolume& volume,const ParaViewContourOpt
     if(options.profile) {
         options.profile->preparationMs=std::chrono::duration<double,std::milli>(filterStart-begin).count();
         options.profile->filterMs=std::chrono::duration<double,std::milli>(conversionStart-filterStart).count();
+        // Includes optional smoothing/decimation, triangulation and Mesh conversion.
         options.profile->conversionMs=std::chrono::duration<double,std::milli>(Clock::now()-conversionStart).count();
     }
     return mesh;
 #endif
 }
 }
+
