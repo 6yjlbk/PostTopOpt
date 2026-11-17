@@ -1,31 +1,34 @@
-
-# CMake build directories
-build/
-out/
-cmake-build-*/
-
-# Visual Studio
+# Local builds, datasets and generated outputs
+/build/
+/out/
+/build-*/
+/cmake-build-*/
+/data/models/*
+!/data/models/README.md
+/data/volumes/*
+!/data/volumes/README.md
+/results/*
+!/results/README.md
 .vs/
+.vscode/
 *.user
 *.suo
-.vscode/
-
-# Compiler outputs
 *.obj
 *.pdb
 *.ilk
 *.exe
 *.lib
 *.dll
-
-# Temporary files
 *.tmp
 *.log
-
-# Obsidian local configuration
 docs/.obsidian/
-# Wavefront geometry exported by the examples (not compiler object files)
-!/results/**/*.obj
 
-# Additional CMake build directories
-build-*/
+# Preserve already versioned source models at their new paths.
+!/data/models/Armadillo.ply
+!/data/models/PittsburghBridgeIsotropicClosed.ply
+!/data/models/bun_zipper.ply
+!/data/models/bun_zipper_closed.ply
+!/data/models/dragon_vrip.ply
+!/data/models/happy_vrip.ply
+!/data/models/spot_quadrangulated.ply
+!/data/models/spot_triangulated.ply
