@@ -14,15 +14,13 @@ struct ExtractionOptions {
     bool enableCapping = false;
     bool mergePoints = true;
 };
+
+// Под замену пойдет, тип сделать изоповерхность
 struct Surface {
     std::vector<std::array<double, 3>> vertices;
     std::vector<std::array<std::size_t, 3>> triangles;
 };
-// Synchronous; input is borrowed only during this call, output owns its data.
-// VF index: (x * Ny + y) * Nz + z. Values and threshold must be in [0,1].
-// At least 3 cells per axis. Empty output is valid.
-// Invalid input: std::invalid_argument; backend failure: std::runtime_error.
-// Allocation failures propagate. No filesystem access.
+// Функция, внутри которой происходит запуск алгоритма и вся работа над ним
 Surface extractVolumeSurface(
     const RegularGrid& grid,
     const std::vector<double>& volumeFractions,

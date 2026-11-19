@@ -1,65 +1,54 @@
 #pragma once
-// PROPOSED CONTRACT ONLY, NOT THE EXISTING vtkop API.
-// Implement/map these operations inside the real vtkop on the target machine.
-// This file deliberately has no VTK includes and no backend implementation.
-// Replace this include boundary with the real vtkop header during integration.
 #include <array>
 #include <cstddef>
 #include <memory>
 #include <vector>
 
-namespace postop::vtkop_contract {
-struct UniformGridObject;
-struct AmrObject;
-struct ContourObject;
-struct PolyDataObject;
-using UniformGrid = std::shared_ptr<UniformGridObject>;
+namespace postop::vtkop_contract { // пространствно имен
+struct UniformGridObject; // регулярная сетка
+struct AmrObject; // контейнер сетки с VF, с которым работает алгоритм DC
+struct ContourObject; // Алгоритм DC 
+struct PolyDataObject; // Хранение результатов DC
+using UniformGrid = std::shared_ptr<UniformGridObject>; 
 using Amr = std::shared_ptr<AmrObject>;
 using Contour = std::shared_ptr<ContourObject>;
 using PolyData = std::shared_ptr<PolyDataObject>;
 
-// Handles retain their underlying VTK objects; destruction must not throw.
-// Operations throw std::runtime_error on VTK failure, never return null
-// for successful creation. Empty geometry is represented by a valid object.
-// Validate all size_t/int conversions to vtkIdType in the implementation.
+// Создание регулярной сетки
 UniformGrid createUniformGrid(
-    const std::array<double, 3>& origin,
-    const std::array<double, 3>& spacing,
-    const std::array<int, 3>& pointDimensions);
+    const std::array<double, 3>& origin, // начало сетки
+    const std::array<double, 3>& spacing, // шаг сетки
+    const std::array<int, 3>& cells, // количество ячеек по каждой оси
+    std::size_t valueCount); // количество значений VF
 
-// Copy before returning, set active cell scalars; do not retain values pointer.
-// x-fastest order, double precision, no scaling of VF to [0,255].
-void setCellScalars(const UniformGrid& grid, const char* name,
+// Заполнение ячеек значениями VF
+void setCellDensities(const UniformGrid& grid,
                     const double* values, std::size_t count);
 
-// One level, one block at index 0; retain block ownership.
+// Создания AMR-контейнера со значениями объемных долей
 Amr createSingleBlockAmr(const UniformGrid& grid);
-Contour createAmrDualContour();
-void setInput(const Contour& contour, const Amr& input);
-void setCellArray(const Contour& contour, const char* name);
-void setIsovalue(const Contour& contour, double value);
-void setCapping(const Contour& contour, bool enabled);
-void setMergePoints(const Contour& contour, bool enabled);
 
-// Use the serial controller behavior of src/ParaViewExtraction.cpp.
-// Restore the global controller on success AND exceptions; coordinate with
-// the host's other controller users. A private mutex alone is insufficient.
-// Attach VTK ErrorEvent observation and report failed Update calls.
+// Создание объекта фильтра DC
+Contour createAmrDualContour();
+
+// Настройка DC
+void setDensityInput(const Contour& contour, const Amr& input); // Передача ячеек с виртуалной плотностью
+void setIsovalue(const Contour& contour, double value); // Задание уровня Iso-поверхности
+void setCapping(const Contour& contour, bool enabled); // Вкл/выкл закрытие поверхности на границе расчетной области
+void setMergePoints(const Contour& contour, bool enabled); // Вкл/выкл объединение общих точек выходной сетки
+
+// Запуск алгоритма
 void update(const Contour& contour);
 
-// Traverse nonempty vtkPolyData leaves in their original order, skipping
-// other leaf types as the existing implementation does. Returned handles
-// remain valid after the producer handle is released.
+// Контейнер с результатами DC (список полигональных блоков результата работы алгоритма DC)
 std::vector<PolyData> polyDataBlocks(const Contour& contour);
 
-// vtkTriangleFilter, PassLinesOff/PassVertsOff; retain resulting data.
-// No smoothing, decimation, welding or orientation changes.
+// Триангулирование результатов работы алгоритма (полигональная модель -> триангулирование представление)
 PolyData triangulate(const PolyData& input);
-std::size_t pointCount(const PolyData& data);
-std::size_t triangleCount(const PolyData& data);
-std::array<double, 3> point(const PolyData& data, std::size_t index);
-// Reject non-triangles and negative VTK IDs before conversion to size_t.
-// Preserve original face order and orientation. Access should not rescan
-// the entire cell array for every index (use VTK indexed access or a cache).
-std::array<std::size_t, 3> triangle(const PolyData& data, std::size_t index);
+
+// Чтение координат и граней
+std::size_t pointCount(const PolyData& data); // Возвращает количество вершин новой поверхности
+std::size_t triangleCount(const PolyData& data); // Возвращает количество граней вершин новой поверхности   
+std::array<double, 3> point(const PolyData& data, std::size_t index); // Возвращает координаты заданой вершины
+std::array<std::size_t, 3> triangle(const PolyData& data, std::size_t index); // Возвращает индексы трех узлов - вершин треугольника 
 } // namespace postop::vtkop_contract
