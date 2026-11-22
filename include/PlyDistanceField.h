@@ -10,5 +10,5 @@ struct PlyDistanceField {
 // resolution: cells across the longest unpadded AABB side; padding: cells per side.
 // Callbacks retain VTK objects. Use sequentially, not concurrently.
 PlyDistanceField makePlyDistanceField(const std::filesystem::path&, int resolution = 64,
-                                    int padding = 3);
+                                    int padding = 0);
 }
