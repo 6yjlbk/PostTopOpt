@@ -11,5 +11,5 @@ struct ExtractionSettings {
     double mcIsovalue=0;
 };
 Mesh extract(Backend,const Grid&,const Field&,const Gradient& = {},const ExtractionSettings& = {}); // метод построения поверхности, когда поле уже задано функцией
-Mesh extract(Backend,const CellScalarVolume&,double densityThreshold,const ExtractionSettings& = {}); // метод построения поверхности, когда есть плотности в элементах
+Mesh extract(Backend,const CellScalarVolume&,double densityiso,const ExtractionSettings& = {}); // метод построения поверхности, когда есть плотности в элементах
 }

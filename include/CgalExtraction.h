@@ -1,5 +1,5 @@
 #pragma once
-#include "DualContouring.h"
+#include "DualContouringGeneral.h"
 namespace geometry {
 struct CgalContourOptions {
     double isovalue = 0;
@@ -15,3 +15,4 @@ bool cgalAvailable() noexcept;
 Mesh cgalDualContour(const Grid&, const Field&, const Gradient& = {},
                      const CgalContourOptions& = {});
 }
+

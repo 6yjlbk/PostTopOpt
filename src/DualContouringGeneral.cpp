@@ -1,4 +1,4 @@
-#include "DualContouring.h"
+#include "DualContouringGeneral.h"
 #include <Eigen/SVD>
 #include <chrono>
 #include <algorithm>
@@ -330,7 +330,7 @@ static Mesh dualContourImpl(const Grid& grid, const Field& field, const Gradient
     return mesh;
 }
 
-Mesh dualContour(const Grid& grid, const Field& field, const Gradient& gradient,
+Mesh dualContourGeneral(const Grid& grid, const Field& field, const Gradient& gradient,
                  const ContourOptions& options) {
     return dualContourImpl(grid,field,gradient,options,false);
 }
@@ -339,3 +339,4 @@ Mesh dualContourEmilk(const Grid& grid, const Field& field, const Gradient& grad
     return dualContourImpl(grid,field,gradient,options,true);
 }
 }
+

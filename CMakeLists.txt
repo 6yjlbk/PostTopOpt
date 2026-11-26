@@ -26,7 +26,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_library(PostTopOpt STATIC src/PostTopOpt.cpp src/Field.cpp src/CellScalarVolume.cpp src/ParaViewExtraction.cpp src/DualContouring.cpp src/MarchingCubes.cpp src/ObjWriter.cpp src/CgalExtraction.cpp)
+add_library(PostTopOpt STATIC src/PostTopOpt.cpp src/Field.cpp src/CellScalarVolume.cpp src/ParaViewExtraction.cpp src/DualContouringGeneral.cpp src/MarchingCubes.cpp src/ObjWriter.cpp src/CgalExtraction.cpp)
 target_include_directories(PostTopOpt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(PostTopOpt PUBLIC Eigen3::Eigen)
 add_executable(PostTopOptDemo apps/legacy/sphere.cpp)
@@ -186,3 +186,4 @@ if(BUILD_TESTING)
     target_link_libraries(PostTopOptApplicationTest PRIVATE PostTopOpt)
     add_test(NAME ApplicationDataTest COMMAND PostTopOptApplicationTest "${CMAKE_CURRENT_BINARY_DIR}/test-data")
 endif()
+

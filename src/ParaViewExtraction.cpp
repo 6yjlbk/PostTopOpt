@@ -124,7 +124,7 @@ Mesh paraViewDualContour(const CellScalarVolume& volume,const ParaViewContourOpt
     for(int n:volume.grid.cells) if(n<3) throw std::invalid_argument("ParaView AMR requires at least 3 cells per axis");
     if(!std::isfinite(options.isovalue)) throw std::invalid_argument("Invalid ParaView isovalue");
     for(double rho:volume.values) if(rho<0 || rho>1) throw std::invalid_argument("ParaView volume fractions must be in [0,1]");
-    if(options.isovalue<0 || options.isovalue>1) throw std::invalid_argument("Volume fraction threshold must be in [0,1]");
+    if(options.isovalue<0 || options.isovalue>1) throw std::invalid_argument("Volume fraction iso must be in [0,1]");
     // ParaView's AMR helper dereferences the global controller even in serial runs.
     // Restore the host controller on all exits; serialize our adapter calls.
     static std::mutex controllerMutex;

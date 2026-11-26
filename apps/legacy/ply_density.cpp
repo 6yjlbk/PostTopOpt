@@ -74,7 +74,7 @@ int main(int argc,char** argv){try{
     std::ofstream report(directory/"report.csv");
     if(!report)throw std::runtime_error("Cannot create report");
     report<<std::setprecision(17);
-    report<<"method,source,cells_requested,nx,ny,nz,ox,oy,oz,h,width_cells,width,threshold,lambda,regularization,constrained,bisection,gradient_step,preparation_ms,sampling_ms,extraction_ms,export_ms,vertices,quads,triangles\n";
+    report<<"method,source,cells_requested,nx,ny,nz,ox,oy,oz,h,width_cells,width,iso,lambda,regularization,constrained,bisection,gradient_step,preparation_ms,sampling_ms,extraction_ms,export_ms,vertices,quads,triangles\n";
     for(const auto& name:methods){
         const auto extractionStart=Clock::now();
         auto mesh=geometry::extract(backend(name),volume,.5,settings);

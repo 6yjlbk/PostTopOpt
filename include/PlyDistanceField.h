@@ -1,6 +1,6 @@
 #pragma once
 #include "PlyImporter.h"
-#include "DualContouring.h"
+#include "DualContouringGeneral.h"
 namespace geometry {
 struct PlyDistanceField {
     Field field;
@@ -12,3 +12,4 @@ struct PlyDistanceField {
 PlyDistanceField makePlyDistanceField(const std::filesystem::path&, int resolution = 64,
                                     int padding = 0);
 }
+

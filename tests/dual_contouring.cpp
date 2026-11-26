@@ -1,6 +1,6 @@
 #include <Eigen/Geometry>
 #include <algorithm>
-#include "DualContouring.h"
+#include "DualContouringGeneral.h"
 #include "ObjWriter.h"
 #include <cmath>
 #include <fstream>
@@ -13,7 +13,7 @@ int main() {
  try {
     Grid g; g.origin=Vec3(-1.7,-1.5,-1.3); g.spacing=Vec3(0.1,0.12,0.14); g.cells={34,25,19};
     auto sphere=[](const Vec3& p){return p.norm()-0.93;};
-    auto mesh=dualContour(g,sphere);
+    auto mesh=dualContourGeneral(g,sphere);
     check(!mesh.quads.empty(),"Empty sphere");
     for(const auto& p:mesh.vertices) check(p.allFinite() && std::abs(sphere(p))<0.03,"Sphere approximation error");
     std::map<std::pair<std::size_t,std::size_t>,std::pair<int,int>> edges;
@@ -28,16 +28,16 @@ int main() {
     for(const auto& [key,e]:edges) check(e.first==2 && e.second==0,"Sphere is not closed and consistently oriented");
     check(static_cast<long long>(mesh.vertices.size())-static_cast<long long>(edges.size())+
           static_cast<long long>(mesh.quads.size())==2,"Unexpected sphere Euler characteristic");
-    check(dualContour(g,[](const Vec3&){return 1.;}).vertices.empty(),"Constant field not empty");
+    check(dualContourGeneral(g,[](const Vec3&){return 1.;}).vertices.empty(),"Constant field not empty");
     ContourOptions options; options.isovalue=0.25; options.regularization=0;
-    auto plane=dualContour(g,[](const Vec3& p){return p.x();}, {},options);
+    auto plane=dualContourGeneral(g,[](const Vec3& p){return p.x();}, {},options);
     check(!plane.quads.empty(),"Empty plane");
     for(const auto& p:plane.vertices) check(std::abs(p.x()-0.25)<1e-10,"Rank deficient QEF failed");
     bool rejected=false;
-    try { Grid bad=g; bad.spacing.x()=0; dualContour(bad,sphere); } catch(const std::invalid_argument&) { rejected=true; }
+    try { Grid bad=g; bad.spacing.x()=0; dualContourGeneral(bad,sphere); } catch(const std::invalid_argument&) { rejected=true; }
     check(rejected,"Invalid grid accepted");
     rejected=false;
-    try { dualContour(g,sphere,[](const Vec3&)->Vec3{return Vec3::Zero();}); } catch(const std::invalid_argument&) { rejected=true; }
+    try { dualContourGeneral(g,sphere,[](const Vec3&)->Vec3{return Vec3::Zero();}); } catch(const std::invalid_argument&) { rejected=true; }
     check(rejected,"Zero normals accepted");
     auto output=std::filesystem::path("test-sphere.obj");
     writeObj(mesh,output); std::ifstream in(output); std::string first; in>>first;
@@ -45,4 +45,5 @@ int main() {
     std::cout<<"Sphere topology/winding, non-cubic grid, plane QEF, empty field, input validation and OBJ passed\n";
  } catch(const std::exception& e) {std::cerr<<e.what()<<'\n';return 1;}
 }
+
 

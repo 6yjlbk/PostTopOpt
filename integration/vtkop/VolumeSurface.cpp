@@ -8,7 +8,7 @@ Surface extractAmrSurface(const Amr& amr,
     // Создание фильтра DC (создание объекта vtkAMRDualContour)
     auto contour = createAmrDualContour();
     setDensityInput(contour, amr); // Подключение поисковой сетки
-    setIsovalue(contour, options.threshold); // Задание уровня изоповерхности
+    setIsovalue(contour, options.iso); // Задание уровня изоповерхности
     setCapping(contour, options.enableCapping); // Настраиваем закрытие поверхности на границе области
     setMergePoints(contour, options.mergePoints); // Настраиваем объединение точек, предусмотренное фильтром
     update(contour, options.extractionSeconds); // Выполнение алгоритма DC

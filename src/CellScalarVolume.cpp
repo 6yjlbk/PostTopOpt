@@ -29,10 +29,10 @@ Field linearCellField(std::shared_ptr<const CellScalarVolume> volume) {
         return value;
     };
 }
-Field densityField(std::shared_ptr<const CellScalarVolume> volume,double threshold) {
-    if(!std::isfinite(threshold)) throw std::invalid_argument("Non-finite density threshold");
+Field densityField(std::shared_ptr<const CellScalarVolume> volume,double iso) {
+    if(!std::isfinite(iso)) throw std::invalid_argument("Non-finite density iso");
     auto rho=linearCellField(std::move(volume));
-    return [rho,threshold](const Vec3& p){return threshold-rho(p);};
+    return [rho,iso](const Vec3& p){return iso-rho(p);};
 }
 CellScalarVolume sampleCells(const Grid& g,const Field& field) {
     validateGrid(g); if(!field) throw std::invalid_argument("Missing field");

@@ -18,6 +18,9 @@ struct ContourOptions {
     bool cacheHermite = true; // Deterministic Field/Gradient required; classic DC only.
     DcProfile* profile = nullptr; // Optional diagnostic run; reset on entry.
 };
-Mesh dualContour(const Grid&, const Field&, const Gradient& = {}, const ContourOptions& = {});
+Mesh dualContourGeneral(const Grid&, const Field&, const Gradient& = {}, const ContourOptions& = {});
 Mesh dualContourEmilk(const Grid&, const Field&, const Gradient& = {}, const ContourOptions& = {});
 }
+
+
+

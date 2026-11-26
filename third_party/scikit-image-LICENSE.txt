@@ -22,7 +22,7 @@ Copyright: 2003-2009 Massachusetts Institute of Technology
            2003-2005 Peter J. Verveer
 License: BSD-3-Clause
 
-Files: skimage/filters/thresholding.py
+Files: skimage/filters/isoing.py
        skimage/graph/_mcp.pyx
        skimage/graph/heap.pyx
 Copyright: 2009-2015 Board of Regents of the University of

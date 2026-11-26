@@ -7,7 +7,7 @@
 
 // Параметры работы алгоритма
 struct ExtractionOptions {
-    double threshold = 0.5; // уровень изоповерхности
+    double iso = 0.5; // уровень изоповерхности
     bool enableCapping = true; // включить закрытие поверхности на границе расчётной области;
     bool mergePoints = true; // включить предусмотренное фильтром объединение точек
     TransferMethod transferMethod = TransferMethod::CellCenterSampling; // выбор метода
@@ -22,7 +22,7 @@ struct Surface {
 // Функция запуска алгоритма DC
 Surface extractVolumeSurface(
     const std::vector<std::array<double, 3>>& points, // Координаты узлов исходной КЭ-сетки
-    const std::vector<std::size_t>& offsets, // offsets отмечает, где начинается и заканчивается каждый элемент. нап
+    const std::vector<std::size_t>& offsets, // offsets отмечает, где начинается и заканчивается каждый элемент
     const std::vector<std::size_t>& nodes, // Индексы узлов всех элементов подряд
     const std::vector<double>& volumeFractions, // Значения VF исходных элементов в том же порядке
     const std::array<int, 3>& searchCells, // Размерность поисковой сетки (число ячеек по х, число ячеек по у, число ячеек по z). Границы AABB определяются по крайним координатам тела

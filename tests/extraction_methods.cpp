@@ -80,7 +80,7 @@ int main() {
         options.bisection=false; // This test asserts the linear edge-interpolation result.
         const auto f=[](const Vec3& p){return p.x()*p.x();};
         const auto grad=[](const Vec3& p)->Vec3 {return Vec3(2*p.x(),0,0);};
-        const auto dc=dualContour(q,f,grad,options);
+        const auto dc=dualContourGeneral(q,f,grad,options);
         const auto emilk=dualContourEmilk(q,f,grad,options);
         check(dc.vertices.size()==1 && emilk.vertices.size()==1,"Missing DC vertex");
         check(std::abs(dc.vertices[0].x()-0.41)<1e-10,"Classic DC regression");
@@ -94,7 +94,7 @@ int main() {
         // Rank-deficient plane, same connectivity in both DC variants.
         options.isovalue=0.35;
         const auto plane=[](const Vec3& p){return p.x();};
-        const auto a=dualContour(g,plane,{},options), b=dualContourEmilk(g,plane,{},options);
+        const auto a=dualContourGeneral(g,plane,{},options), b=dualContourEmilk(g,plane,{},options);
         check(a.quads==b.quads && !b.quads.empty(),"DC connectivity changed");
         for(const auto& p:b.vertices) check(std::abs(p.x()-0.35)<1e-10,"Emilk plane QEF failed");
         check(marchingCubes(g,[](const Vec3&){return 1.;}).vertices.empty(),"MC constant field");
@@ -122,3 +122,4 @@ int main() {
         std::cout<<"256 MC cases, winding/sharing, exact-isovalue plane, corner QEF, scaling, validation and OBJ passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}
 }
+

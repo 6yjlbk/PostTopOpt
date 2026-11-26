@@ -16,7 +16,7 @@ inline ExtractionMethod parseMethod(std::string_view method) {
 inline Mesh extractSurface(ExtractionMethod method, const Grid& grid, const Field& field,
                            const Gradient& gradient = {}, const ContourOptions& options = {}) { 
     switch (method) { //РІС‹Р·РѕРІ РЅСѓР¶РЅРѕР№ С„СѓРЅРєС†РёРё
-    case ExtractionMethod::DualContouring: return dualContour(grid, field, gradient, options);
+    case ExtractionMethod::DualContouring: return dualContourGeneral(grid, field, gradient, options);
     case ExtractionMethod::EmilkDualContouring: return dualContourEmilk(grid, field, gradient, options);
     case ExtractionMethod::CgalDualContouring:
         // CGAL has its own vertex solver; ContourOptions::regularization is not used.
@@ -36,3 +36,4 @@ inline Mesh extractSurface(ExtractionMethod method, const Grid& grid, const Fiel
     throw std::invalid_argument("Invalid extraction method");
 }
 }
+

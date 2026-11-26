@@ -65,14 +65,14 @@ int main(int argc,char** argv) {try {
     std::filesystem::path output,saveVolume;
     int cells=64,complexity=4,repeats=5;
     bool benchmark=true,exportObj=true,cellsExplicit=false,complexityExplicit=false;
-    double widthCells=2.,threshold=.5;
+    double widthCells=2.,iso=.5;
     ExtractionSettings settings;
     for(int i=1;i<argc;++i) {
         const std::string arg=argv[i];
         if(arg=="--help") {
             std::cout<<"PostTopOptRun --input file.ply|file.csv|file.ptov|model --output-dir directory\n"
                 "Models: sphere torus sphere-union drilled-box cone gyroid channels lattice shells\n"
-                "--cells 64 --complexity 4 --width-cells 2 --threshold 0.5\n"
+                "--cells 64 --complexity 4 --width-cells 2 --iso 0.5\n"
                 "--method dc|emilk|mc|cgal-dc|paraview-amr|all|compare\n"
                 "--benchmark true|false (default: true) --repeats 5 --export true|false --save-volume path.csv\n"
                 "--lambda 0.001 --regularization true --constrained true --bisection true\n"
@@ -88,7 +88,7 @@ int main(int argc,char** argv) {try {
         else if(arg=="--complexity"){complexity=integer(value);complexityExplicit=true;}
         else if(arg=="--repeats")repeats=integer(value);
         else if(arg=="--width-cells")widthCells=number(value);
-        else if(arg=="--threshold")threshold=number(value);
+        else if(arg=="--iso")iso=number(value);
         else if(arg=="--benchmark")benchmark=boolean(value);
         else if(arg=="--export")exportObj=boolean(value);
         else if(arg=="--lambda")settings.dc.regularization=number(value);
@@ -100,8 +100,8 @@ int main(int argc,char** argv) {try {
         else throw std::invalid_argument("Unknown option: "+arg);
     }
     if(input.empty() || output.empty())throw std::invalid_argument("--input and --output-dir required");
-    if(cells<16 || cells>500 || complexity<1 || complexity>12 || (benchmark && (repeats<2 || repeats>50)) || widthCells<=0 || widthCells>4 || threshold<=0 || threshold>=1 || settings.dc.regularization<0)
-        throw std::invalid_argument("Expected cells:16..500 complexity:1..12 repeats:2..50 width-cells:(0,4] threshold:(0,1) lambda>=0");
+    if(cells<16 || cells>500 || complexity<1 || complexity>12 || (benchmark && (repeats<2 || repeats>50)) || widthCells<=0 || widthCells>4 || iso<=0 || iso>=1 || settings.dc.regularization<0)
+        throw std::invalid_argument("Expected cells:16..500 complexity:1..12 repeats:2..50 width-cells:(0,4] iso:(0,1) lambda>=0");
     std::vector<Method> methods;
     if(selected=="all")for(const char* name:{"dc","emilk","mc","cgal-dc","paraview-amr"})methods.push_back(method(name));
     else if(selected=="compare")methods={method("dc"),method("paraview-amr")};
@@ -147,7 +147,7 @@ int main(int argc,char** argv) {try {
         <<"\nbenchmark="<<benchmark<<"\nrepeats="<<(benchmark?repeats:1)<<"\nexport="<<exportObj
         <<"\ncells="<<volume.grid.cells[0]<<','<<volume.grid.cells[1]<<','<<volume.grid.cells[2]
         <<"\norigin="<<volume.grid.origin.transpose()<<"\nspacing="<<volume.grid.spacing.transpose()
-        <<"\ncomplexity="<<complexity<<"\nwidth_cells="<<widthCells<<"\nthreshold="<<threshold
+        <<"\ncomplexity="<<complexity<<"\nwidth_cells="<<widthCells<<"\niso="<<iso
         <<"\nlambda="<<settings.dc.regularization<<"\nregularization="<<settings.dc.regularizationEnabled
         <<"\nconstrained="<<settings.dc.constrainToCell<<"\nbisection="<<settings.dc.bisection
         <<"\ngradient_step="<<settings.dc.gradientStep<<"\ncache="<<settings.dc.cacheHermite<<"\nqef="<<settings.dc.optimizeQef
@@ -175,11 +175,11 @@ int main(int argc,char** argv) {try {
     std::vector<std::vector<double>> times(methods.size());
     std::vector<Counts> expected(methods.size());
     std::vector<double> exportTimes(methods.size(),0.);
-    if(benchmark)for(const auto& m:methods)check(extract(m.backend,volume,threshold,settings));
+    if(benchmark)for(const auto& m:methods)check(extract(m.backend,volume,iso,settings));
     // Rotate method order between repetitions; mesh destruction and checking are outside timing.
     for(int rep=0;rep<(benchmark?repeats:1);++rep)for(std::size_t order=0;order<methods.size();++order) {
         const auto i=(order+rep)%methods.size();
-        const auto start=Clock::now();const auto mesh=extract(methods[i].backend,volume,threshold,settings);
+        const auto start=Clock::now();const auto mesh=extract(methods[i].backend,volume,iso,settings);
         const double extractionMs=elapsed(start);const auto counts=check(mesh);
         if(rep && !(counts==expected[i]))throw std::runtime_error("Output counts changed between repetitions");
         expected[i]=counts;times[i].push_back(extractionMs);
@@ -195,7 +195,7 @@ int main(int argc,char** argv) {try {
         double exportMs=exportTimes[i],profileMs=0;
         if(benchmark) {
             const auto start=Clock::now();
-            const auto mesh=extract(methods[i].backend,volume,threshold,diagnostic);
+            const auto mesh=extract(methods[i].backend,volume,iso,diagnostic);
             profileMs=elapsed(start);
             if(!(check(mesh)==expected[i]))throw std::runtime_error("Diagnostic/export output counts changed");
             if(exportObj){const auto exportStart=Clock::now();writeObj(mesh,output/(methods[i].name+".obj"));exportMs=elapsed(exportStart);}

@@ -92,7 +92,7 @@ int main(int argc,char** argv){try{
         return 0; // Export never opens or overwrites benchmark timing reports.
     }
     if(std::filesystem::exists(directory/"runs.csv") || std::filesystem::exists(directory/"summary.csv"))throw std::runtime_error("Reports exist; move them before repeating");
-    std::ofstream config(directory/"run-settings.txt");config<<"cache="<<cache<<"\nqef="<<qef<<"\nrepeats="<<repeats<<"\nthreshold=0.5\nlambda=0.001\nregularization=1\nconstrained=1\nbisection=1\n";
+    std::ofstream config(directory/"run-settings.txt");config<<"cache="<<cache<<"\nqef="<<qef<<"\nrepeats="<<repeats<<"\niso=0.5\nlambda=0.001\nregularization=1\nconstrained=1\nbisection=1\n";
     std::ofstream raw(directory/"runs.csv"),out(directory/"summary.csv");if(!raw || !out)throw std::runtime_error("Cannot create reports");
     raw<<"case,method,repeat,total_ms,vertices,quads,triangles\n";
     out<<"case,method,cells,total_median_ms,total_min_ms,total_max_ms,profile_total_ms,prepare_ms,node_sampling_ms,hermite_ms,qef_ms,connectivity_ms,filter_ms,conversion_ms,active_cells,edge_visits,unique_edges,field_queries,qef_interior,qef_boundary,hermite_evaluations,hermite_cache_hits,vertices,quads,triangles\n";

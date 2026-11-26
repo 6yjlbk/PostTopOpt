@@ -11,7 +11,7 @@ struct CellScalarVolume {
 // Trilinear interpolation on cell centers; constant continuation outside their hull.
 // This does not fill/cap the physical domain and is not a shape-function interpolation.
 Field linearCellField(std::shared_ptr<const CellScalarVolume>); //трилинейная интерполяция виртуальной плотности между центрами КЭ
-// Converts high density to negative-inside convention, with zero surface threshold.
-Field densityField(std::shared_ptr<const CellScalarVolume>, double threshold); //учет порога материала
+// Converts high density to negative-inside convention, with zero surface iso.
+Field densityField(std::shared_ptr<const CellScalarVolume>, double iso); //учет порога материала
 CellScalarVolume sampleCells(const Grid&, const Field&);
 }

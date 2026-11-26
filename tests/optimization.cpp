@@ -1,4 +1,4 @@
-#include "DualContouring.h"
+#include "DualContouringGeneral.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -23,7 +23,7 @@ int main(){try{
             ContourOptions original;original.constrainToCell=constrained;original.regularizationEnabled=regularized;original.bisection=bisect;
             original.optimizeQef=false;original.cacheHermite=false;
             auto optimized=original;optimized.optimizeQef=true;optimized.cacheHermite=true;
-            auto a=dualContour(g,f,gradient,original),b=dualContour(g,f,gradient,optimized);compare(a,b);vertices+=b.vertices.size();++checked;
+            auto a=dualContourGeneral(g,f,gradient,original),b=dualContourGeneral(g,f,gradient,optimized);compare(a,b);vertices+=b.vertices.size();++checked;
             compare(dualContourEmilk(g,f,gradient,original),dualContourEmilk(g,f,gradient,optimized));++checked;
         }
     }
@@ -31,8 +31,9 @@ int main(){try{
     for(double iso:{0.,.15}){
         ContourOptions a;a.isovalue=iso;a.regularization=0;a.optimizeQef=false;a.cacheHermite=false;
         auto b=a;b.optimizeQef=true;b.cacheHermite=true;
-        compare(dualContour(g,[](const Vec3& p){return p.x();},{},a),dualContour(g,[](const Vec3& p){return p.x();},{},b));
+        compare(dualContourGeneral(g,[](const Vec3& p){return p.x();},{},a),dualContourGeneral(g,[](const Vec3& p){return p.x();},{},b));
     }
     if(!vertices)throw std::runtime_error("No active cells checked");
     std::cout<<checked<<" optimized/reference comparisons passed, "<<vertices<<" DC vertices checked\n";
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+

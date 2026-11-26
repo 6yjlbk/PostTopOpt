@@ -378,7 +378,7 @@ void setDensityInput(const Contour& contour, const Amr& input) {
 void setIsovalue(const Contour& contour, double value) {
     auto& contourObject = checked(contour);
     if (!std::isfinite(value) || value < 0 || value > 1)
-    throw std::invalid_argument("Invalid VF threshold");
+    throw std::invalid_argument("Invalid VF iso");
     contourObject.updated = false;
     contourObject.filter->SetIsoValue(value);
 }
